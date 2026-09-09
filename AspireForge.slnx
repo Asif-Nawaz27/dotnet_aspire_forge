@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/feature/">
+    <Project Path="feature/AspireForge.Analyzers/AspireForge.Analyzers.csproj" />
+    <Project Path="feature/AspireForge.Cli/AspireForge.Cli.csproj" />
+    <Project Path="feature/AspireForge.Core/AspireForge.Core.csproj" />
+    <Project Path="feature/AspireForge.Generators/AspireForge.Generators.csproj" />
+  </Folder>
+</Solution>
