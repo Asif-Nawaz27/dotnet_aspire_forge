@@ -18,4 +18,8 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\feature\AspireForge.Cli\AspireForge.Cli.csproj" />
+  </ItemGroup>
+
 </Project>
