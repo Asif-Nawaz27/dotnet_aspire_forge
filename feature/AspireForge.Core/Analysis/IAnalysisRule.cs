@@ -4,7 +4,11 @@ public interface IAnalysisRule
 {
     string Id { get; }
 
-    string Description { get; }
+    string Title { get; }
 
-    IEnumerable<AnalysisIssue> Evaluate(ProjectContext context);
+    Severity DefaultSeverity { get; }
+
+    Task<AnalysisIssue?> EvaluateAsync(
+        ProjectContext context,
+        CancellationToken cancellationToken = default);
 }

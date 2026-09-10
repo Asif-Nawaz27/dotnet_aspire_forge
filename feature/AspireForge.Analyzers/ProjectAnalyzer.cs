@@ -6,9 +6,14 @@ public class ProjectAnalyzer(IEnumerable<IAnalysisRule> rules) : IProjectAnalyze
 {
     private readonly IReadOnlyList<IAnalysisRule> _rules = rules.ToList();
 
-    public AnalysisResult Analyze(ProjectContext context)
+    public async Task<AnalysisResult> AnalyzeAsync(
+        ProjectContext context,
+        CancellationToken cancellationToken = default)
     {
-        var issues = _rules.SelectMany(rule => rule.Evaluate(context)).ToList();
+        var results = await Task.WhenAll(
+            _rules.Select(rule => rule.EvaluateAsync(context, cancellationToken)));
+
+        var issues = results.Where(issue => issue is not null).Select(issue => issue!).ToList();
 
         return new AnalysisResult(context.Project.Name, issues);
     }
