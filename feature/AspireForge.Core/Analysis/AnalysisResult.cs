@@ -1,8 +1,9 @@
 namespace AspireForge.Core.Analysis;
 
-public class AnalysisResult
+public sealed record AnalysisResult(
+    string ProjectName,
+    IReadOnlyCollection<AnalysisIssue> Issues)
 {
-    public required string ProjectName { get; init; }
-
-    public IReadOnlyList<AnalysisIssue> Issues { get; init; } = [];
+    public bool HasErrors =>
+        Issues.Any(x => x.Severity == Severity.Error);
 }

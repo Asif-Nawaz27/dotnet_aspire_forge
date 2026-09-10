@@ -10,10 +10,6 @@ public class ProjectAnalyzer(IEnumerable<IAnalysisRule> rules) : IProjectAnalyze
     {
         var issues = _rules.SelectMany(rule => rule.Evaluate(context)).ToList();
 
-        return new AnalysisResult
-        {
-            ProjectName = context.Project.Name,
-            Issues = issues,
-        };
+        return new AnalysisResult(context.Project.Name, issues);
     }
 }
