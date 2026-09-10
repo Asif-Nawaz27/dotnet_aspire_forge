@@ -15,6 +15,6 @@ public class ProjectAnalyzer(IEnumerable<IAnalysisRule> rules) : IProjectAnalyze
 
         var issues = results.Where(issue => issue is not null).Select(issue => issue!).ToList();
 
-        return new AnalysisResult(context.Project.Name, issues);
+        return new AnalysisResult(context.ProjectName, issues);
     }
 }

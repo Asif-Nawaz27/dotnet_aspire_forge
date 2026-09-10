@@ -1,10 +1,16 @@
-using AspireForge.Core.Models;
-
 namespace AspireForge.Core.Analysis;
 
-public class ProjectContext
+public sealed class ProjectContext
 {
-    public required ProjectInfo Project { get; init; }
+    public required string RootDirectory { get; init; }
 
-    public required string RootPath { get; init; }
+    public required string ProjectFile { get; init; }
+
+    public required string ProjectName { get; init; }
+
+    public required IReadOnlyCollection<string> SourceFiles { get; init; }
+
+    public required IReadOnlyCollection<string> ProjectReferences { get; init; }
+
+    public required IReadOnlyCollection<string> PackageReferences { get; init; }
 }
