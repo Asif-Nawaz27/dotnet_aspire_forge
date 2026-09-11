@@ -14,6 +14,9 @@ switch (args[0])
         await new DoctorCommand(new ConsoleRenderer()).RunAsync(path);
         return 0;
 
+    case "new":
+        return new NewCommand(new ConsoleRenderer()).Run(args.Skip(1).ToArray());
+
     default:
         Console.WriteLine($"Unknown command: {args[0]}");
         return 1;
