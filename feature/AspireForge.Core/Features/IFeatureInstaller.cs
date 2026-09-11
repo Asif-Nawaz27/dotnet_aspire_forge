@@ -4,5 +4,5 @@ public interface IFeatureInstaller
 {
     FeatureDefinition Feature { get; }
 
-    Task InstallAsync(FeatureContext context, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<string>> InstallAsync(FeatureContext context, CancellationToken cancellationToken = default);
 }

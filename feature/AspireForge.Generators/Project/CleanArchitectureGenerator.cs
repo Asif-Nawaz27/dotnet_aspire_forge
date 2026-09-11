@@ -38,10 +38,10 @@ public sealed class CleanArchitectureGenerator : IProjectGenerator
             var templates = SelectTemplates(options, root);
 
             GenerateProjects(options, root, templates);
-            ApplyFeatures(options, root);
+            var featureSteps = ApplyFeatures(options, root);
 
             var generatedFiles = DescribeGeneratedProjects(root, templates)
-                .Concat(DescribeAppliedFeatures(root))
+                .Concat(featureSteps)
                 .ToList();
 
             return new GenerationResult { Success = true, GeneratedFiles = generatedFiles };
@@ -121,14 +121,17 @@ public sealed class CleanArchitectureGenerator : IProjectGenerator
     }
 
     // apply features: layer AspireForge's own additions (Docker, CI, docs) on top of the templates.
-    private static void ApplyFeatures(GenerationOptions options, string root)
+    private static IReadOnlyList<string> ApplyFeatures(GenerationOptions options, string root)
     {
         var context = new FeatureContext { ProjectName = options.ProjectName, RootPath = root };
+        var steps = new List<string>();
 
         foreach (var feature in Features)
         {
-            feature.InstallAsync(context).GetAwaiter().GetResult();
+            steps.AddRange(feature.InstallAsync(context).GetAwaiter().GetResult());
         }
+
+        return steps;
     }
 
     private static IEnumerable<string> DescribeGeneratedProjects(string root, IReadOnlyList<ProjectTemplate> templates)
@@ -146,16 +149,6 @@ public sealed class CleanArchitectureGenerator : IProjectGenerator
         }
     }
 
-    private static IEnumerable<string> DescribeAppliedFeatures(string root)
-    {
-        foreach (var relativePath in new[] { "README.md", ".gitignore", "Dockerfile", ".dockerignore", ".github/workflows/ci.yml" })
-        {
-            if (File.Exists(Path.Combine(root, relativePath)))
-            {
-                yield return relativePath;
-            }
-        }
-    }
 }
 
 internal sealed record ProjectTemplate(string Layer, string TemplateName, string ProjectName, string ProjectPath);

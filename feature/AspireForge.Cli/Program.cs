@@ -1,5 +1,8 @@
+using System.Text;
 using AspireForge.Cli.Commands;
 using AspireForge.Cli.Output;
+
+Console.OutputEncoding = Encoding.UTF8;
 
 if (args.Length == 0)
 {
@@ -16,6 +19,9 @@ switch (args[0])
 
     case "new":
         return new NewCommand(new ConsoleRenderer()).Run(args.Skip(1).ToArray());
+
+    case "add":
+        return await new AddCommand(new ConsoleRenderer()).RunAsync(args.Skip(1).ToArray());
 
     default:
         Console.WriteLine($"Unknown command: {args[0]}");

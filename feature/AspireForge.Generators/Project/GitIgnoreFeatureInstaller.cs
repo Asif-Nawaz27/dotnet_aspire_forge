@@ -11,9 +11,12 @@ public sealed class GitIgnoreFeatureInstaller : IFeatureInstaller
         Description = "Adds a .gitignore tuned for a multi-project .NET solution.",
     };
 
-    public Task InstallAsync(FeatureContext context, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<string>> InstallAsync(
+        FeatureContext context, CancellationToken cancellationToken = default)
     {
         var path = Path.Combine(context.RootPath, ".gitignore");
-        return File.WriteAllTextAsync(path, GitIgnoreTemplate.Render(), cancellationToken);
+        await File.WriteAllTextAsync(path, GitIgnoreTemplate.Render(), cancellationToken);
+
+        return ["Added .gitignore"];
     }
 }

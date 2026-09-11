@@ -11,11 +11,14 @@ public sealed class GitHubActionsFeatureInstaller : IFeatureInstaller
         Description = "Adds a workflow that restores, builds, and tests the solution on push and pull request.",
     };
 
-    public Task InstallAsync(FeatureContext context, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<string>> InstallAsync(
+        FeatureContext context, CancellationToken cancellationToken = default)
     {
         var path = Path.Combine(context.RootPath, ".github", "workflows", "ci.yml");
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
 
-        return File.WriteAllTextAsync(path, GitHubWorkflows.Ci(context.ProjectName), cancellationToken);
+        await File.WriteAllTextAsync(path, GitHubWorkflows.Ci(context.ProjectName), cancellationToken);
+
+        return ["Added CI workflow"];
     }
 }
