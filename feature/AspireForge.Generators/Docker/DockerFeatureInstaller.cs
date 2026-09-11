@@ -11,7 +11,8 @@ public sealed class DockerFeatureInstaller : IFeatureInstaller
         Description = "Adds a multi-stage Dockerfile and .dockerignore targeting the generated Api project.",
     };
 
-    public async Task InstallAsync(FeatureContext context, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<string>> InstallAsync(
+        FeatureContext context, CancellationToken cancellationToken = default)
     {
         var apiProjectName = $"{context.ProjectName}.Api";
 
@@ -24,5 +25,7 @@ public sealed class DockerFeatureInstaller : IFeatureInstaller
             Path.Combine(context.RootPath, ".dockerignore"),
             DockerAssets.DockerIgnore(),
             cancellationToken);
+
+        return ["Added Dockerfile", "Added .dockerignore"];
     }
 }
