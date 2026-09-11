@@ -1,17 +1,25 @@
+using AspireForge.Core.Features;
 using AspireForge.Core.Generation;
 using AspireForge.Generators.Docker;
 using AspireForge.Generators.GitHub;
 
 namespace AspireForge.Generators.Project;
 
+// Composes existing dotnet new templates (classlib/webapi/xunit) rather than a bespoke template engine.
 public sealed class CleanArchitectureGenerator : IProjectGenerator
 {
+    private static readonly IFeatureInstaller[] Features =
+    [
+        new ReadmeFeatureInstaller(),
+        new GitIgnoreFeatureInstaller(),
+        new DockerFeatureInstaller(),
+        new GitHubActionsFeatureInstaller(),
+    ];
+
     public string Name => "clean";
 
     public GenerationResult Generate(GenerationOptions options)
     {
-        var generatedFiles = new List<string>();
-
         try
         {
             var root = Path.Combine(options.OutputPath, options.ProjectName);
@@ -27,88 +35,127 @@ public sealed class CleanArchitectureGenerator : IProjectGenerator
 
             Directory.CreateDirectory(root);
 
-            var srcDirectory = Path.Combine(root, "src");
-            var testsDirectory = Path.Combine(root, "tests");
+            var templates = SelectTemplates(options, root);
 
-            var domainName = $"{options.ProjectName}.Domain";
-            var applicationName = $"{options.ProjectName}.Application";
-            var infrastructureName = $"{options.ProjectName}.Infrastructure";
-            var apiName = $"{options.ProjectName}.Api";
-            var integrationTestsName = $"{options.ProjectName}.IntegrationTests";
+            GenerateProjects(options, root, templates);
+            ApplyFeatures(options, root);
 
-            var domainPath = Path.Combine(srcDirectory, domainName);
-            var applicationPath = Path.Combine(srcDirectory, applicationName);
-            var infrastructurePath = Path.Combine(srcDirectory, infrastructureName);
-            var apiPath = Path.Combine(srcDirectory, apiName);
-            var integrationTestsPath = Path.Combine(testsDirectory, integrationTestsName);
-
-            DotnetCli.Run(["new", "sln", "-n", options.ProjectName, "-o", root], root);
-            DotnetCli.Run(["new", "classlib", "-n", domainName, "-o", domainPath], root);
-            DotnetCli.Run(["new", "classlib", "-n", applicationName, "-o", applicationPath], root);
-            DotnetCli.Run(["new", "classlib", "-n", infrastructureName, "-o", infrastructurePath], root);
-            DotnetCli.Run(["new", "webapi", "-n", apiName, "-o", apiPath], root);
-            DotnetCli.Run(["new", "xunit", "-n", integrationTestsName, "-o", integrationTestsPath], root);
-
-            foreach (var projectPath in new[] { domainPath, applicationPath, infrastructurePath, apiPath, integrationTestsPath })
-            {
-                DotnetCli.Run(["sln", "add", projectPath], root);
-            }
-
-            DotnetCli.Run(["add", applicationPath, "reference", domainPath], root);
-            DotnetCli.Run(["add", infrastructurePath, "reference", domainPath, applicationPath], root);
-            DotnetCli.Run(["add", apiPath, "reference", applicationPath, infrastructurePath], root);
-            DotnetCli.Run(["add", integrationTestsPath, "reference", apiPath], root);
-
-            RemoveTemplatePlaceholder(domainPath);
-            RemoveTemplatePlaceholder(applicationPath);
-            RemoveTemplatePlaceholder(infrastructurePath);
-
-            var solutionFile = Directory.EnumerateFiles(root, "*.sln*", SearchOption.TopDirectoryOnly).FirstOrDefault();
-            if (solutionFile is not null)
-            {
-                generatedFiles.Add(Path.GetFileName(solutionFile));
-            }
-            generatedFiles.Add($"src/{domainName}/");
-            generatedFiles.Add($"src/{applicationName}/");
-            generatedFiles.Add($"src/{infrastructureName}/");
-            generatedFiles.Add($"src/{apiName}/");
-            generatedFiles.Add($"tests/{integrationTestsName}/");
-
-            generatedFiles.Add(WriteFile(root, "Dockerfile", DockerAssets.Dockerfile(apiName)));
-            generatedFiles.Add(WriteFile(root, ".dockerignore", DockerAssets.DockerIgnore()));
-            generatedFiles.Add(WriteFile(root, ".gitignore", GitIgnoreTemplate.Render()));
-            generatedFiles.Add(WriteFile(root, "README.md", ReadmeTemplate.Render(options.ProjectName)));
-            generatedFiles.Add(WriteFile(
-                root, Path.Combine(".github", "workflows", "ci.yml"), GitHubWorkflows.Ci(options.ProjectName)));
+            var generatedFiles = DescribeGeneratedProjects(root, templates)
+                .Concat(DescribeAppliedFeatures(root))
+                .ToList();
 
             return new GenerationResult { Success = true, GeneratedFiles = generatedFiles };
         }
         catch (Exception ex)
         {
-            return new GenerationResult
-            {
-                Success = false,
-                GeneratedFiles = generatedFiles,
-                Errors = [ex.Message],
-            };
+            return new GenerationResult { Success = false, Errors = [ex.Message] };
         }
     }
 
-    private static void RemoveTemplatePlaceholder(string projectPath)
+    // select template: map each architectural layer to an installed .NET template.
+    private static IReadOnlyList<ProjectTemplate> SelectTemplates(GenerationOptions options, string root)
     {
-        var placeholder = Path.Combine(projectPath, "Class1.cs");
+        var srcDirectory = Path.Combine(root, "src");
+        var testsDirectory = Path.Combine(root, "tests");
 
-        if (File.Exists(placeholder))
+        string ProjectName(string layer) => $"{options.ProjectName}.{layer}";
+
+        return
+        [
+            new ProjectTemplate("Domain", "classlib", ProjectName("Domain"), Path.Combine(srcDirectory, ProjectName("Domain"))),
+            new ProjectTemplate("Application", "classlib", ProjectName("Application"), Path.Combine(srcDirectory, ProjectName("Application"))),
+            new ProjectTemplate("Infrastructure", "classlib", ProjectName("Infrastructure"), Path.Combine(srcDirectory, ProjectName("Infrastructure"))),
+            new ProjectTemplate("Api", "webapi", ProjectName("Api"), Path.Combine(srcDirectory, ProjectName("Api"))),
+            new ProjectTemplate("IntegrationTests", "xunit", ProjectName("IntegrationTests"), Path.Combine(testsDirectory, ProjectName("IntegrationTests"))),
+        ];
+    }
+
+    // configure + generate: invoke each selected template, then wire the solution together.
+    private static void GenerateProjects(GenerationOptions options, string root, IReadOnlyList<ProjectTemplate> templates)
+    {
+        DotnetCli.Run(["new", "sln", "-n", options.ProjectName, "-o", root], root);
+
+        foreach (var template in templates)
         {
-            File.Delete(placeholder);
+            DotnetCli.Run(ConfigureTemplateArguments(template, options), root);
+            DotnetCli.Run(["sln", "add", template.ProjectPath], root);
+        }
+
+        LinkArchitectureReferences(templates, root);
+        RemoveTemplatePlaceholders(templates);
+    }
+
+    private static List<string> ConfigureTemplateArguments(ProjectTemplate template, GenerationOptions options)
+    {
+        List<string> arguments = ["new", template.TemplateName, "-n", template.ProjectName, "-o", template.ProjectPath];
+
+        if (options.Parameters.TryGetValue($"{template.Layer}:args", out var extraArguments))
+        {
+            arguments.AddRange(extraArguments.Split(' ', StringSplitOptions.RemoveEmptyEntries));
+        }
+
+        return arguments;
+    }
+
+    private static void LinkArchitectureReferences(IReadOnlyList<ProjectTemplate> templates, string root)
+    {
+        string PathOf(string layer) => templates.First(template => template.Layer == layer).ProjectPath;
+
+        DotnetCli.Run(["add", PathOf("Application"), "reference", PathOf("Domain")], root);
+        DotnetCli.Run(["add", PathOf("Infrastructure"), "reference", PathOf("Domain"), PathOf("Application")], root);
+        DotnetCli.Run(["add", PathOf("Api"), "reference", PathOf("Application"), PathOf("Infrastructure")], root);
+        DotnetCli.Run(["add", PathOf("IntegrationTests"), "reference", PathOf("Api")], root);
+    }
+
+    private static void RemoveTemplatePlaceholders(IReadOnlyList<ProjectTemplate> templates)
+    {
+        foreach (var template in templates.Where(template => template.TemplateName == "classlib"))
+        {
+            var placeholder = Path.Combine(template.ProjectPath, "Class1.cs");
+
+            if (File.Exists(placeholder))
+            {
+                File.Delete(placeholder);
+            }
         }
     }
 
-    private static string WriteFile(string root, string relativePath, string content)
+    // apply features: layer AspireForge's own additions (Docker, CI, docs) on top of the templates.
+    private static void ApplyFeatures(GenerationOptions options, string root)
     {
-        var fullPath = Path.Combine(root, relativePath);
-        Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
-        File.WriteAllText(fullPath, content);
-        return relativePath.Replace('\\', '/');
+        var context = new FeatureContext { ProjectName = options.ProjectName, RootPath = root };
+
+        foreach (var feature in Features)
+        {
+            feature.InstallAsync(context).GetAwaiter().GetResult();
+        }
+    }
+
+    private static IEnumerable<string> DescribeGeneratedProjects(string root, IReadOnlyList<ProjectTemplate> templates)
+    {
+        var solutionFile = Directory.EnumerateFiles(root, "*.sln*", SearchOption.TopDirectoryOnly).FirstOrDefault();
+
+        if (solutionFile is not null)
+        {
+            yield return Path.GetFileName(solutionFile);
+        }
+
+        foreach (var template in templates)
+        {
+            yield return $"{Path.GetRelativePath(root, template.ProjectPath).Replace('\\', '/')}/";
+        }
+    }
+
+    private static IEnumerable<string> DescribeAppliedFeatures(string root)
+    {
+        foreach (var relativePath in new[] { "README.md", ".gitignore", "Dockerfile", ".dockerignore", ".github/workflows/ci.yml" })
+        {
+            if (File.Exists(Path.Combine(root, relativePath)))
+            {
+                yield return relativePath;
+            }
+        }
     }
 }
+
+internal sealed record ProjectTemplate(string Layer, string TemplateName, string ProjectName, string ProjectPath);
