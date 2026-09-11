@@ -2,6 +2,7 @@ using AspireForge.Cli.Output;
 using AspireForge.Core.Features;
 using AspireForge.Generators.Caching;
 using AspireForge.Generators.Database;
+using AspireForge.Generators.Docker;
 using AspireForge.Generators.Observability;
 
 namespace AspireForge.Cli.Commands;
@@ -14,6 +15,7 @@ public class AddCommand(ConsoleRenderer renderer)
             new EfCoreDatabaseFeatureInstaller(DatabaseProviders.Postgres),
             new RedisFeatureInstaller(),
             new TelemetryFeatureInstaller(),
+            new DockerFeatureInstaller(),
         }.ToDictionary(installer => installer.Feature.Id, StringComparer.OrdinalIgnoreCase);
 
     public async Task<int> RunAsync(string[] args)

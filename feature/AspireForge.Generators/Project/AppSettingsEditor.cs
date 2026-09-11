@@ -23,4 +23,15 @@ internal static class AppSettingsEditor
 
         File.WriteAllText(appsettingsPath, root.ToJsonString(WriteOptions));
     }
+
+    public static bool HasConnectionString(string appsettingsPath, string name)
+    {
+        if (!File.Exists(appsettingsPath))
+        {
+            return false;
+        }
+
+        var root = JsonNode.Parse(File.ReadAllText(appsettingsPath)) as JsonObject;
+        return root?["ConnectionStrings"] is JsonObject connectionStrings && connectionStrings.ContainsKey(name);
+    }
 }

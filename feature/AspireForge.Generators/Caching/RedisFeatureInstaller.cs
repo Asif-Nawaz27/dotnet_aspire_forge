@@ -5,6 +5,8 @@ namespace AspireForge.Generators.Caching;
 
 public sealed class RedisFeatureInstaller : IFeatureInstaller
 {
+    public const string ConnectionStringName = "Redis";
+
     public FeatureDefinition Feature { get; } = new()
     {
         Id = "redis",
@@ -26,7 +28,7 @@ public sealed class RedisFeatureInstaller : IFeatureInstaller
         steps.Add("Added StackExchange.Redis client");
 
         AppSettingsEditor.AddConnectionString(
-            Path.Combine(apiProjectPath, "appsettings.json"), "Redis", "localhost:6379");
+            Path.Combine(apiProjectPath, "appsettings.json"), ConnectionStringName, "localhost:6379");
         steps.Add("Added connection configuration");
 
         ProgramFileEditor.AddUsingsAndServiceRegistration(
@@ -35,7 +37,7 @@ public sealed class RedisFeatureInstaller : IFeatureInstaller
             serviceRegistrationLines:
             [
                 "builder.Services.AddStackExchangeRedisCache(options =>",
-                "    options.Configuration = builder.Configuration.GetConnectionString(\"Redis\"));",
+                $"    options.Configuration = builder.Configuration.GetConnectionString(\"{ConnectionStringName}\"));",
             ]);
         steps.Add("Added distributed cache registration");
 
