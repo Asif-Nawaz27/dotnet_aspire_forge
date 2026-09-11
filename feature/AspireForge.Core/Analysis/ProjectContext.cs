@@ -8,6 +8,8 @@ public sealed class ProjectContext
 
     public required string ProjectName { get; init; }
 
+    public string? TargetFramework { get; init; }
+
     public required IReadOnlyCollection<string> SourceFiles { get; init; }
 
     public required IReadOnlyCollection<string> ProjectReferences { get; init; }
