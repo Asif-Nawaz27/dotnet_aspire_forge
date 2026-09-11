@@ -27,4 +27,68 @@ internal static class DockerAssets
         **/.dockerignore
         **/*.md
         """;
+
+    public static string DockerCompose(string projectName, bool includePostgres, bool includeRedis)
+    {
+        var lines = new List<string>
+        {
+            "services:",
+            "  api:",
+            "    build:",
+            "      context: .",
+            "      dockerfile: Dockerfile",
+            "    ports:",
+            "      - \"8080:8080\"",
+        };
+
+        if (includePostgres || includeRedis)
+        {
+            lines.Add("    depends_on:");
+            if (includePostgres)
+            {
+                lines.Add("      - postgres");
+            }
+            if (includeRedis)
+            {
+                lines.Add("      - redis");
+            }
+        }
+
+        if (includePostgres)
+        {
+            lines.AddRange(
+            [
+                string.Empty,
+                "  postgres:",
+                "    image: postgres:16",
+                "    environment:",
+                $"      POSTGRES_DB: {projectName}",
+                "      POSTGRES_USER: postgres",
+                "      POSTGRES_PASSWORD: postgres",
+                "    ports:",
+                "      - \"5432:5432\"",
+                "    volumes:",
+                "      - postgres-data:/var/lib/postgresql/data",
+            ]);
+        }
+
+        if (includeRedis)
+        {
+            lines.AddRange(
+            [
+                string.Empty,
+                "  redis:",
+                "    image: redis:7",
+                "    ports:",
+                "      - \"6379:6379\"",
+            ]);
+        }
+
+        if (includePostgres)
+        {
+            lines.AddRange([string.Empty, "volumes:", "  postgres-data:"]);
+        }
+
+        return string.Join('\n', lines) + "\n";
+    }
 }
