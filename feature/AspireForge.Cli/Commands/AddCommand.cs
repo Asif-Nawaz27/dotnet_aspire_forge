@@ -11,7 +11,7 @@ public class AddCommand(ConsoleRenderer renderer)
     private static readonly IReadOnlyDictionary<string, IFeatureInstaller> FeatureInstallers =
         new IFeatureInstaller[]
         {
-            new PostgresFeatureInstaller(),
+            new EfCoreDatabaseFeatureInstaller(DatabaseProviders.Postgres),
             new RedisFeatureInstaller(),
             new TelemetryFeatureInstaller(),
         }.ToDictionary(installer => installer.Feature.Id, StringComparer.OrdinalIgnoreCase);
