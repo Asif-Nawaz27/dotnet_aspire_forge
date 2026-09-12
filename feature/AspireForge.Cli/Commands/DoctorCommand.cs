@@ -20,7 +20,7 @@ public class DoctorCommand(ConsoleRenderer renderer)
         ("Architecture", "ARCH001", "No obvious dependency violations"),
     ];
 
-    public async Task RunAsync(string path, CancellationToken cancellationToken = default)
+    public async Task<int> RunAsync(string path, CancellationToken cancellationToken = default)
     {
         var context = ProjectContextBuilder.Build(path);
         var analyzer = new ProjectAnalyzer(AnalysisRuleSet.CreateDefault());
@@ -75,5 +75,7 @@ public class DoctorCommand(ConsoleRenderer renderer)
 
         var score = (int)Math.Round(10.0 * passedCount / Checks.Length);
         renderer.WriteLine($"Production Readiness: {score}/10");
+
+        return result.HasErrors ? 1 : 0;
     }
 }

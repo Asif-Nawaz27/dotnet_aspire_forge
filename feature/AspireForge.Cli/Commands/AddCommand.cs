@@ -10,7 +10,7 @@ namespace AspireForge.Cli.Commands;
 
 public class AddCommand(ConsoleRenderer renderer)
 {
-    private static readonly IReadOnlyDictionary<string, IFeatureInstaller> FeatureInstallers =
+    public static readonly IReadOnlyDictionary<string, IFeatureInstaller> FeatureInstallers =
         new IFeatureInstaller[]
         {
             new EfCoreDatabaseFeatureInstaller(DatabaseProviders.Postgres),
@@ -20,23 +20,9 @@ public class AddCommand(ConsoleRenderer renderer)
             new AuthenticationFeatureInstaller(),
         }.ToDictionary(installer => installer.Feature.Id, StringComparer.OrdinalIgnoreCase);
 
-    public async Task<int> RunAsync(string[] args)
+    public async Task<int> RunAsync(string featureId)
     {
-        if (args.Length == 0)
-        {
-            renderer.WriteLine("Usage: aspireforge add <feature>");
-            renderer.WriteLine($"Supported features: {string.Join(", ", FeatureInstallers.Keys)}");
-            return 1;
-        }
-
-        var featureName = args[0];
-
-        if (!FeatureInstallers.TryGetValue(featureName, out var installer))
-        {
-            renderer.WriteLine(
-                $"Feature '{featureName}' is not supported yet. Supported: {string.Join(", ", FeatureInstallers.Keys)}.");
-            return 1;
-        }
+        var installer = FeatureInstallers[featureId];
 
         var root = Directory.GetCurrentDirectory();
         var solutionFile = Directory.EnumerateFiles(root, "*.sln*", SearchOption.TopDirectoryOnly).FirstOrDefault();
