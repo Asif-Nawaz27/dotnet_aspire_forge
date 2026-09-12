@@ -13,6 +13,20 @@ internal static class ProgramFileEditor
         File.WriteAllLines(programCsPath, lines);
     }
 
+    public static void InsertBeforeAppRun(string programCsPath, IReadOnlyList<string> lines)
+    {
+        var fileLines = File.ReadAllLines(programCsPath).ToList();
+        var anchorIndex = fileLines.FindIndex(line => line.Contains("app.Run("));
+
+        if (anchorIndex < 0)
+        {
+            throw new InvalidOperationException("Could not find 'app.Run()' in Program.cs.");
+        }
+
+        fileLines.InsertRange(anchorIndex, lines.Append(string.Empty));
+        File.WriteAllLines(programCsPath, fileLines);
+    }
+
     private static void InsertMissingUsings(List<string> lines, IReadOnlyList<string> usings)
     {
         var missing = usings

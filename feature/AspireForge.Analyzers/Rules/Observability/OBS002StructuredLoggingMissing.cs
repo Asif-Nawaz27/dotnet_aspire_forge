@@ -17,24 +17,26 @@ public sealed class OBS002StructuredLoggingMissing : IAnalysisRule
 
     public Severity DefaultSeverity => Severity.Info;
 
-    public Task<AnalysisIssue?> EvaluateAsync(
+    public async Task<AnalysisIssue?> EvaluateAsync(
         ProjectContext context,
         CancellationToken cancellationToken = default)
     {
-        var hasStructuredLogging = context.PackageReferences.Any(package =>
+        var hasStructuredLoggingPackage = context.PackageReferences.Any(package =>
             StructuredLoggingPackagePrefixes.Any(
                 prefix => package.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)));
 
-        if (hasStructuredLogging)
+        if (hasStructuredLoggingPackage
+            || await SourceFileHeuristics.ContainsAnyAsync(context, cancellationToken, "Logging.AddOpenTelemetry("))
         {
-            return Task.FromResult<AnalysisIssue?>(null);
+            return null;
         }
 
-        return Task.FromResult<AnalysisIssue?>(new AnalysisIssue(
+        return new AnalysisIssue(
             Id,
             Title,
-            "No structured logging provider (e.g. Serilog, NLog) was found. Log output will be harder to query and correlate.",
+            "No structured logging provider (e.g. Serilog, NLog, or OpenTelemetry logging) was found. "
+                + "Log output will be harder to query and correlate.",
             DefaultSeverity,
-            context.ProjectFile));
+            context.ProjectFile);
     }
 }

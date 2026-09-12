@@ -12,10 +12,15 @@ public static class ProjectContextBuilder
             ?? throw new InvalidOperationException($"Could not determine directory for '{projectFile}'.");
 
         var document = XDocument.Load(projectFile);
+        var projectReferences = ReadIncludes(document, "ProjectReference");
 
-        var sourceFiles = Directory
-            .EnumerateFiles(rootDirectory, "*.cs", SearchOption.AllDirectories)
-            .Where(file => !IsInBuildOutputDirectory(file))
+        // A referenced project's code (e.g. a shared ServiceDefaults project configuring telemetry or
+        // health checks) effectively runs as part of this service too, so rules that look for patterns
+        // in source text should see it. Package references stay project-local (e.g. ARCH001 needs to
+        // know what THIS project directly depends on).
+        var sourceFiles = EnumerateSourceFiles(rootDirectory)
+            .Concat(projectReferences.SelectMany(reference => EnumerateReferencedSourceFiles(rootDirectory, reference)))
+            .Distinct()
             .ToList();
 
         return new ProjectContext
@@ -25,9 +30,23 @@ public static class ProjectContextBuilder
             ProjectName = Path.GetFileNameWithoutExtension(projectFile),
             TargetFramework = ReadTargetFramework(document),
             SourceFiles = sourceFiles,
-            ProjectReferences = ReadIncludes(document, "ProjectReference"),
+            ProjectReferences = projectReferences,
             PackageReferences = ReadIncludes(document, "PackageReference"),
         };
+    }
+
+    private static IEnumerable<string> EnumerateSourceFiles(string directory) =>
+        Directory.EnumerateFiles(directory, "*.cs", SearchOption.AllDirectories)
+            .Where(file => !IsInBuildOutputDirectory(file));
+
+    private static IEnumerable<string> EnumerateReferencedSourceFiles(string rootDirectory, string referenceRelativePath)
+    {
+        var referencedProjectFile = Path.GetFullPath(Path.Combine(rootDirectory, referenceRelativePath));
+        var referencedDirectory = Path.GetDirectoryName(referencedProjectFile);
+
+        return referencedDirectory is not null && Directory.Exists(referencedDirectory)
+            ? EnumerateSourceFiles(referencedDirectory)
+            : [];
     }
 
     private static string LoadProject(string path)

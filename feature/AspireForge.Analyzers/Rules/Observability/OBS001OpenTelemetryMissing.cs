@@ -10,23 +10,20 @@ public sealed class OBS001OpenTelemetryMissing : IAnalysisRule
 
     public Severity DefaultSeverity => Severity.Info;
 
-    public Task<AnalysisIssue?> EvaluateAsync(
+    public async Task<AnalysisIssue?> EvaluateAsync(
         ProjectContext context,
         CancellationToken cancellationToken = default)
     {
-        var hasOpenTelemetry = context.PackageReferences.Any(
-            package => package.StartsWith("OpenTelemetry", StringComparison.OrdinalIgnoreCase));
-
-        if (hasOpenTelemetry)
+        if (await SourceFileHeuristics.ContainsAnyAsync(context, cancellationToken, "AddOpenTelemetry("))
         {
-            return Task.FromResult<AnalysisIssue?>(null);
+            return null;
         }
 
-        return Task.FromResult<AnalysisIssue?>(new AnalysisIssue(
+        return new AnalysisIssue(
             Id,
             Title,
-            "No OpenTelemetry package reference was found. Traces, metrics, and distributed context will not be collected.",
+            "No call to AddOpenTelemetry was found. Traces, metrics, and distributed context will not be collected.",
             DefaultSeverity,
-            context.ProjectFile));
+            context.ProjectFile);
     }
 }
