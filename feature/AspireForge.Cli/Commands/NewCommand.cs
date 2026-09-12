@@ -10,30 +10,12 @@ public class NewCommand(ConsoleRenderer renderer)
         new IProjectGenerator[] { new CleanArchitectureGenerator() }
             .ToDictionary(generator => generator.Name, StringComparer.OrdinalIgnoreCase);
 
-    public int Run(string[] args)
+    public int Run(string projectName, string architecture)
     {
-        if (args.Length == 0)
-        {
-            renderer.WriteLine("Usage: aspireforge new <name> [--architecture <name>]");
-            return 1;
-        }
-
-        var projectName = args[0];
-
         if (string.IsNullOrWhiteSpace(projectName) || projectName.Any(Path.GetInvalidFileNameChars().Contains))
         {
             renderer.WriteLine($"'{projectName}' is not a valid project name.");
             return 1;
-        }
-
-        var architecture = "clean";
-
-        for (var i = 1; i < args.Length; i++)
-        {
-            if (args[i] == "--architecture" && i + 1 < args.Length)
-            {
-                architecture = args[++i];
-            }
         }
 
         if (!Generators.TryGetValue(architecture, out var generator))
