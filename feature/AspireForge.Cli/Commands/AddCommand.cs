@@ -30,7 +30,7 @@ public class AddCommand(ConsoleRenderer renderer)
         if (solutionFile is null)
         {
             renderer.WriteLine($"No solution file found in '{root}'. Run this from the root of an AspireForge project.");
-            return 1;
+            return ExitCodes.InvalidConfiguration;
         }
 
         var context = new FeatureContext
@@ -53,13 +53,13 @@ public class AddCommand(ConsoleRenderer renderer)
 
             renderer.WriteLine();
             renderer.WriteLine($"{installer.Feature.Name} integration added successfully.");
-            return 0;
+            return ExitCodes.Success;
         }
         catch (Exception ex)
         {
             renderer.WriteLine();
             renderer.WriteLine($"Failed to add '{installer.Feature.Name}': {ex.Message}");
-            return 1;
+            return ExitCodes.GenerationFailure;
         }
     }
 }

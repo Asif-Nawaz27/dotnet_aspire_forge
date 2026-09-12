@@ -1,7 +1,9 @@
 using System.CommandLine;
 using System.Text;
+using AspireForge.Cli;
 using AspireForge.Cli.Commands;
 using AspireForge.Cli.Output;
+using AspireForge.Core.Analysis;
 
 Console.OutputEncoding = Encoding.UTF8;
 
@@ -13,7 +15,12 @@ root.Subcommands.Add(BuildDoctorCommand());
 root.Subcommands.Add(BuildVersionCommand());
 root.Subcommands.Add(BuildHelpCommand(root));
 
-return await root.Parse(args).InvokeAsync();
+var parseResult = root.Parse(args);
+var invokeExit = await parseResult.InvokeAsync();
+
+// System.CommandLine's own parse failures (unknown command, bad option value, missing argument) are
+// a configuration problem from AspireForge's exit-code scheme, not the generic "1" it defaults to.
+return parseResult.Errors.Count > 0 ? ExitCodes.InvalidConfiguration : invokeExit;
 
 static Command BuildNewCommand()
 {
@@ -59,10 +66,31 @@ static Command BuildDoctorCommand()
         DefaultValueFactory = _ => Directory.GetCurrentDirectory(),
     };
 
-    var command = new Command("doctor", "Analyze a project against AspireForge's rule set.") { pathArgument };
+    var failOnOption = new Option<Severity>("--fail-on")
+    {
+        Description = "The minimum issue severity that causes doctor to exit with a non-zero code.",
+        DefaultValueFactory = _ => Severity.Error,
+    };
+
+    var formatOption = new Option<OutputFormat>("--format")
+    {
+        Description = "The output format.",
+        DefaultValueFactory = _ => OutputFormat.Text,
+    };
+
+    var command = new Command("doctor", "Analyze a project against AspireForge's rule set.")
+    {
+        pathArgument,
+        failOnOption,
+        formatOption,
+    };
 
     command.SetAction((parseResult, cancellationToken) => new DoctorCommand(new ConsoleRenderer())
-        .RunAsync(parseResult.GetValue(pathArgument)!, cancellationToken));
+        .RunAsync(
+            parseResult.GetValue(pathArgument)!,
+            parseResult.GetValue(failOnOption),
+            parseResult.GetValue(formatOption),
+            cancellationToken));
 
     return command;
 }
