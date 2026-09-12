@@ -34,15 +34,21 @@ public class DoctorCommand(ConsoleRenderer renderer)
         CancellationToken cancellationToken = default)
     {
         var context = ProjectContextBuilder.Build(path);
-        var analyzer = new ProjectAnalyzer(AnalysisRuleSet.CreateDefault());
+        var rules = AnalysisRuleSet.CreateDefault();
+        var analyzer = new ProjectAnalyzer(rules);
         var result = await analyzer.AnalyzeAsync(path, cancellationToken);
 
         var shouldFail = result.Issues.Any(issue => issue.Severity >= failOn);
 
-        if (format == OutputFormat.Json)
+        switch (format)
         {
-            WriteJsonReport(result);
-            return shouldFail ? ExitCodes.AnalysisFoundErrors : ExitCodes.Success;
+            case OutputFormat.Json:
+                WriteJsonReport(result);
+                return shouldFail ? ExitCodes.AnalysisFoundErrors : ExitCodes.Success;
+
+            case OutputFormat.Sarif:
+                WriteSarifReport(result, rules);
+                return shouldFail ? ExitCodes.AnalysisFoundErrors : ExitCodes.Success;
         }
 
         var issuesByRuleId = result.Issues.ToDictionary(issue => issue.RuleId);
@@ -108,5 +114,11 @@ public class DoctorCommand(ConsoleRenderer renderer)
                 .ToList());
 
         renderer.WriteLine(JsonSerializer.Serialize(report, JsonOptions));
+    }
+
+    private void WriteSarifReport(AnalysisResult result, IReadOnlyList<IAnalysisRule> rules)
+    {
+        var log = SarifReportBuilder.Build(result, rules);
+        renderer.WriteLine(JsonSerializer.Serialize(log, JsonOptions));
     }
 }
