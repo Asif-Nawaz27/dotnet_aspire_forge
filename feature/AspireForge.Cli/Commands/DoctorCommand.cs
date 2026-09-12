@@ -1,5 +1,6 @@
 using System.Text.Json;
 using AspireForge.Analyzers;
+using AspireForge.Analyzers.Configuration;
 using AspireForge.Cli.Output;
 using AspireForge.Core.Analysis;
 
@@ -34,9 +35,11 @@ public class DoctorCommand(ConsoleRenderer renderer)
         CancellationToken cancellationToken = default)
     {
         var context = ProjectContextBuilder.Build(path);
-        var rules = AnalysisRuleSet.CreateDefault();
+        var config = ConfigLoader.Load(context.RootDirectory);
+        var rules = AnalysisRuleSet.ApplyConfig(AnalysisRuleSet.CreateDefault(), config);
         var analyzer = new ProjectAnalyzer(rules);
-        var result = await analyzer.AnalyzeAsync(path, cancellationToken);
+        var rawResult = await analyzer.AnalyzeAsync(path, cancellationToken);
+        var result = AnalysisRuleSet.ApplySeverityOverrides(rawResult, config);
 
         var shouldFail = result.Issues.Any(issue => issue.Severity >= failOn);
 
@@ -52,6 +55,8 @@ public class DoctorCommand(ConsoleRenderer renderer)
         }
 
         var issuesByRuleId = result.Issues.ToDictionary(issue => issue.RuleId);
+        var enabledRuleIds = rules.Select(rule => rule.Id).ToHashSet();
+        var activeChecks = Checks.Where(check => enabledRuleIds.Contains(check.RuleId)).ToList();
 
         renderer.WriteLine("AspireForge Doctor");
         renderer.WriteLine();
@@ -62,11 +67,11 @@ public class DoctorCommand(ConsoleRenderer renderer)
         var warningCount = 0;
         var passedCount = 0;
 
-        foreach (var category in Checks.Select(check => check.Category).Distinct())
+        foreach (var category in activeChecks.Select(check => check.Category).Distinct())
         {
             renderer.WriteSectionHeader(category);
 
-            foreach (var check in Checks.Where(check => check.Category == category))
+            foreach (var check in activeChecks.Where(check => check.Category == category))
             {
                 if (issuesByRuleId.TryGetValue(check.RuleId, out var issue))
                 {
@@ -98,7 +103,7 @@ public class DoctorCommand(ConsoleRenderer renderer)
         renderer.WriteSeparator();
         renderer.WriteLine();
 
-        var score = (int)Math.Round(10.0 * passedCount / Checks.Length);
+        var score = activeChecks.Count == 0 ? 10 : (int)Math.Round(10.0 * passedCount / activeChecks.Count);
         renderer.WriteLine($"Production Readiness: {score}/10");
 
         return shouldFail ? ExitCodes.AnalysisFoundErrors : ExitCodes.Success;
