@@ -8,20 +8,6 @@ namespace AspireForge.Cli.Commands;
 
 public class DoctorCommand(ConsoleRenderer renderer)
 {
-    private static readonly (string Category, string RuleId, string PassedMessage)[] Checks =
-    [
-        ("Security", "SEC001", "Authentication configured"),
-        ("Security", "SEC002", "CORS policy restricts origins"),
-        ("Security", "SEC003", "HTTPS configured"),
-        ("Reliability", "REL001", "Health checks configured"),
-        ("Reliability", "REL002", "Global exception handling"),
-        ("Observability", "OBS001", "OpenTelemetry configured"),
-        ("Observability", "OBS002", "Structured logging"),
-        ("Testing", "TEST001", "Unit tests detected"),
-        ("Testing", "TEST002", "Integration tests detected"),
-        ("Architecture", "ARCH001", "No obvious dependency violations"),
-    ];
-
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -56,7 +42,7 @@ public class DoctorCommand(ConsoleRenderer renderer)
 
         var issuesByRuleId = result.Issues.ToDictionary(issue => issue.RuleId);
         var enabledRuleIds = rules.Select(rule => rule.Id).ToHashSet();
-        var activeChecks = Checks.Where(check => enabledRuleIds.Contains(check.RuleId)).ToList();
+        var activeChecks = RuleCatalog.Entries.Where(check => enabledRuleIds.Contains(check.RuleId)).ToList();
 
         renderer.WriteLine("AspireForge Doctor");
         renderer.WriteLine();

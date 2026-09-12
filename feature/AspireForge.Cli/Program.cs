@@ -12,6 +12,7 @@ var root = new RootCommand("AspireForge - opinionated .NET Aspire project scaffo
 root.Subcommands.Add(BuildNewCommand());
 root.Subcommands.Add(BuildAddCommand());
 root.Subcommands.Add(BuildDoctorCommand());
+root.Subcommands.Add(BuildRulesCommand());
 root.Subcommands.Add(BuildVersionCommand());
 root.Subcommands.Add(BuildHelpCommand(root));
 
@@ -91,6 +92,19 @@ static Command BuildDoctorCommand()
             parseResult.GetValue(failOnOption),
             parseResult.GetValue(formatOption),
             cancellationToken));
+
+    return command;
+}
+
+static Command BuildRulesCommand()
+{
+    // "install" (pulling in third-party rule packs) is a later, separate feature - this is just
+    // the read side of the rule catalog for now.
+    var command = new Command("rules", "Inspect AspireForge's analysis rules.");
+
+    var listCommand = new Command("list", "List all available rules.");
+    listCommand.SetAction(_ => new RulesCommand(new ConsoleRenderer()).List());
+    command.Subcommands.Add(listCommand);
 
     return command;
 }
