@@ -8,22 +8,22 @@ internal static class ProgramFileEditor
         var lines = File.ReadAllLines(programCsPath).ToList();
 
         InsertMissingUsings(lines, usings);
-        InsertAfterBuilderCreation(lines, serviceRegistrationLines);
+        InsertAfter(lines, "WebApplication.CreateBuilder", serviceRegistrationLines);
 
         File.WriteAllLines(programCsPath, lines);
+    }
+
+    public static void InsertAfterBuilderBuild(string programCsPath, IReadOnlyList<string> lines)
+    {
+        var fileLines = File.ReadAllLines(programCsPath).ToList();
+        InsertAfter(fileLines, "builder.Build()", lines);
+        File.WriteAllLines(programCsPath, fileLines);
     }
 
     public static void InsertBeforeAppRun(string programCsPath, IReadOnlyList<string> lines)
     {
         var fileLines = File.ReadAllLines(programCsPath).ToList();
-        var anchorIndex = fileLines.FindIndex(line => line.Contains("app.Run("));
-
-        if (anchorIndex < 0)
-        {
-            throw new InvalidOperationException("Could not find 'app.Run()' in Program.cs.");
-        }
-
-        fileLines.InsertRange(anchorIndex, lines.Append(string.Empty));
+        InsertBefore(fileLines, "app.Run(", lines);
         File.WriteAllLines(programCsPath, fileLines);
     }
 
@@ -40,15 +40,27 @@ internal static class ProgramFileEditor
         }
     }
 
-    private static void InsertAfterBuilderCreation(List<string> lines, IReadOnlyList<string> serviceRegistrationLines)
+    private static void InsertAfter(List<string> lines, string anchor, IReadOnlyList<string> newLines)
     {
-        var anchorIndex = lines.FindIndex(line => line.Contains("WebApplication.CreateBuilder"));
+        var anchorIndex = lines.FindIndex(line => line.Contains(anchor));
 
         if (anchorIndex < 0)
         {
-            throw new InvalidOperationException("Could not find 'WebApplication.CreateBuilder' in Program.cs.");
+            throw new InvalidOperationException($"Could not find '{anchor}' in Program.cs.");
         }
 
-        lines.InsertRange(anchorIndex + 1, serviceRegistrationLines.Prepend(string.Empty));
+        lines.InsertRange(anchorIndex + 1, newLines.Prepend(string.Empty));
+    }
+
+    private static void InsertBefore(List<string> lines, string anchor, IReadOnlyList<string> newLines)
+    {
+        var anchorIndex = lines.FindIndex(line => line.Contains(anchor));
+
+        if (anchorIndex < 0)
+        {
+            throw new InvalidOperationException($"Could not find '{anchor}' in Program.cs.");
+        }
+
+        lines.InsertRange(anchorIndex, newLines.Append(string.Empty));
     }
 }
