@@ -15,14 +15,14 @@ public class NewCommand(ConsoleRenderer renderer)
         if (string.IsNullOrWhiteSpace(projectName) || projectName.Any(Path.GetInvalidFileNameChars().Contains))
         {
             renderer.WriteLine($"'{projectName}' is not a valid project name.");
-            return 1;
+            return ExitCodes.InvalidConfiguration;
         }
 
         if (!Generators.TryGetValue(architecture, out var generator))
         {
             renderer.WriteLine(
                 $"Architecture '{architecture}' is not supported yet. Supported: {string.Join(", ", Generators.Keys)}.");
-            return 1;
+            return ExitCodes.InvalidConfiguration;
         }
 
         var options = new GenerationOptions
@@ -42,7 +42,7 @@ public class NewCommand(ConsoleRenderer renderer)
                 renderer.WriteLine($"  {error}");
             }
 
-            return 1;
+            return ExitCodes.GenerationFailure;
         }
 
         renderer.WriteLine($"Created {projectName} ({architecture} architecture):");
@@ -51,6 +51,6 @@ public class NewCommand(ConsoleRenderer renderer)
             renderer.WriteLine($"  {file}");
         }
 
-        return 0;
+        return ExitCodes.Success;
     }
 }

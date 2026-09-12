@@ -1,3 +1,4 @@
+using System.Text.Json;
 using AspireForge.Analyzers;
 using AspireForge.Cli.Output;
 using AspireForge.Core.Analysis;
@@ -20,11 +21,29 @@ public class DoctorCommand(ConsoleRenderer renderer)
         ("Architecture", "ARCH001", "No obvious dependency violations"),
     ];
 
-    public async Task<int> RunAsync(string path, CancellationToken cancellationToken = default)
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        WriteIndented = true,
+    };
+
+    public async Task<int> RunAsync(
+        string path,
+        Severity failOn = Severity.Error,
+        OutputFormat format = OutputFormat.Text,
+        CancellationToken cancellationToken = default)
     {
         var context = ProjectContextBuilder.Build(path);
         var analyzer = new ProjectAnalyzer(AnalysisRuleSet.CreateDefault());
         var result = await analyzer.AnalyzeAsync(path, cancellationToken);
+
+        var shouldFail = result.Issues.Any(issue => issue.Severity >= failOn);
+
+        if (format == OutputFormat.Json)
+        {
+            WriteJsonReport(result);
+            return shouldFail ? ExitCodes.AnalysisFoundErrors : ExitCodes.Success;
+        }
 
         var issuesByRuleId = result.Issues.ToDictionary(issue => issue.RuleId);
 
@@ -76,6 +95,18 @@ public class DoctorCommand(ConsoleRenderer renderer)
         var score = (int)Math.Round(10.0 * passedCount / Checks.Length);
         renderer.WriteLine($"Production Readiness: {score}/10");
 
-        return result.HasErrors ? 1 : 0;
+        return shouldFail ? ExitCodes.AnalysisFoundErrors : ExitCodes.Success;
+    }
+
+    private void WriteJsonReport(AnalysisResult result)
+    {
+        var report = new DoctorJsonReport(
+            result.ProjectName,
+            result.Issues
+                .Select(issue => new DoctorJsonIssue(
+                    issue.RuleId, issue.Severity.ToString().ToLowerInvariant(), issue.Title))
+                .ToList());
+
+        renderer.WriteLine(JsonSerializer.Serialize(report, JsonOptions));
     }
 }
