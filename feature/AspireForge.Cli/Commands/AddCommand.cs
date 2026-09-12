@@ -1,5 +1,6 @@
 using AspireForge.Cli.Output;
 using AspireForge.Core.Features;
+using AspireForge.Generators.Authentication;
 using AspireForge.Generators.Caching;
 using AspireForge.Generators.Database;
 using AspireForge.Generators.Docker;
@@ -16,6 +17,7 @@ public class AddCommand(ConsoleRenderer renderer)
             new RedisFeatureInstaller(),
             new TelemetryFeatureInstaller(),
             new DockerFeatureInstaller(),
+            new AuthenticationFeatureInstaller(),
         }.ToDictionary(installer => installer.Feature.Id, StringComparer.OrdinalIgnoreCase);
 
     public async Task<int> RunAsync(string[] args)

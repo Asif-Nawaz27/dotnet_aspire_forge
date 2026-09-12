@@ -7,19 +7,25 @@ internal static class AppSettingsEditor
 {
     private static readonly JsonSerializerOptions WriteOptions = new() { WriteIndented = true };
 
-    public static void AddConnectionString(string appsettingsPath, string name, string value)
+    public static void AddConnectionString(string appsettingsPath, string name, string value) =>
+        AddSection(appsettingsPath, "ConnectionStrings", new Dictionary<string, string> { [name] = value });
+
+    public static void AddSection(string appsettingsPath, string sectionName, IReadOnlyDictionary<string, string> values)
     {
         var root = File.Exists(appsettingsPath)
             ? JsonNode.Parse(File.ReadAllText(appsettingsPath)) as JsonObject ?? new JsonObject()
             : new JsonObject();
 
-        if (root["ConnectionStrings"] is not JsonObject connectionStrings)
+        if (root[sectionName] is not JsonObject section)
         {
-            connectionStrings = new JsonObject();
-            root["ConnectionStrings"] = connectionStrings;
+            section = new JsonObject();
+            root[sectionName] = section;
         }
 
-        connectionStrings[name] = value;
+        foreach (var (key, value) in values)
+        {
+            section[key] = value;
+        }
 
         File.WriteAllText(appsettingsPath, root.ToJsonString(WriteOptions));
     }
