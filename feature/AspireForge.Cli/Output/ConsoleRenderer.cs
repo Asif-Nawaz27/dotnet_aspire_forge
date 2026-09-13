@@ -1,16 +1,18 @@
 namespace AspireForge.Cli.Output;
 
-public class ConsoleRenderer
+public class ConsoleRenderer(TextWriter? writer = null)
 {
-    public void WriteLine(string text = "") => Console.WriteLine(text);
+    private readonly TextWriter _writer = writer ?? Console.Out;
+
+    public void WriteLine(string text = "") => _writer.WriteLine(text);
 
     public void WriteSectionHeader(string title)
     {
-        Console.WriteLine();
-        Console.WriteLine(title);
+        _writer.WriteLine();
+        _writer.WriteLine(title);
     }
 
-    public void WriteCheck(string symbol, string text) => Console.WriteLine($"  {symbol} {text}");
+    public void WriteCheck(string symbol, string text) => _writer.WriteLine($"  {symbol} {text}");
 
-    public void WriteSeparator(int width = 32) => Console.WriteLine(new string('-', width));
+    public void WriteSeparator(int width = 32) => _writer.WriteLine(new string('-', width));
 }
