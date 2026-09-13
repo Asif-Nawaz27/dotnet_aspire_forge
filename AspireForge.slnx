@@ -9,6 +9,7 @@
     <Project Path="tests/AspireForge.Analyzers.Tests/AspireForge.Analyzers.Tests.csproj" />
     <Project Path="tests/AspireForge.Cli.Tests/AspireForge.Cli.Tests.csproj" />
     <Project Path="tests/AspireForge.Core.Tests/AspireForge.Core.Tests.csproj" />
+    <Project Path="tests/AspireForge.Generators.Tests/AspireForge.Generators.Tests.csproj" />
     <Project Path="tests/AspireForge.IntegrationTests/AspireForge.IntegrationTests.csproj" />
   </Folder>
 </Solution>
