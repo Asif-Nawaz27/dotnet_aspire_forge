@@ -5,7 +5,7 @@ Opinionated .NET Aspire project scaffolding and analysis CLI.
 ## Install
 
 ```bash
-dotnet tool install --global AspireForge.Cli
+dotnet tool install --global AspireForge
 ```
 
 ## Commands
@@ -32,6 +32,15 @@ their severity:
   }
 }
 ```
+
+## Packages
+
+AspireForge ships as a single NuGet package (`AspireForge`, the global tool). Internally it's split
+into separate class libraries (`AspireForge.Core`, `AspireForge.Analyzers`, `AspireForge.Generators`)
+that stay unpublished for now - that modularity is what would let pieces like the rule engine or the
+project templates become their own published packages later (e.g. `AspireForge.Core`,
+`AspireForge.Analyzers`, `AspireForge.Rules`, `AspireForge.Templates`) without a rewrite, but v0.1
+intentionally ships one tool rather than a family of packages.
 
 ## License
 
