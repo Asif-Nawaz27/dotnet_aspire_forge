@@ -6,5 +6,6 @@
 /.vs/*
 /*/*/obj
 /*/*/bin
+/artifacts
 
 
