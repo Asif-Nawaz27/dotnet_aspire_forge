@@ -33,6 +33,14 @@ their severity:
 }
 ```
 
+## Documentation
+
+- [Installation](docs/getting-started/installation.md) · [Your first API](docs/getting-started/first-api.md) · [Using an existing API](docs/getting-started/existing-api.md)
+- Commands: [`new`](docs/commands/new.md) · [`add`](docs/commands/add.md) · [`doctor`](docs/commands/doctor.md)
+- Rules: [security](docs/rules/security.md) · [reliability](docs/rules/reliability.md) · [observability](docs/rules/observability.md) · [testing](docs/rules/testing.md) · [architecture](docs/rules/architecture.md)
+- Features: [postgres](docs/features/postgres.md) · [redis](docs/features/redis.md) · [telemetry](docs/features/telemetry.md)
+- [Architecture overview](docs/architecture/overview.md) · [Rule engine](docs/architecture/rule-engine.md)
+
 ## Packages
 
 AspireForge ships as a single NuGet package (`AspireForge`, the global tool). Internally it's split
