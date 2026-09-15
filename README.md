@@ -103,6 +103,7 @@ scanning. `--fail-on warning` makes CI fail on warnings, not just errors. Detail
 |---|---|
 | `aspireforge new <name>` | Generates a clean-architecture solution (Domain/Application/Infrastructure/Api), plus a Dockerfile, docker-compose.yml, and a GitHub Actions CI workflow. |
 | `aspireforge add postgres` | Npgsql, an EF Core `DbContext`, connection config, and migrations tooling. |
+| `aspireforge add sqlserver` | The same, backed by SQL Server. |
 | `aspireforge add redis` | A StackExchange.Redis-backed distributed cache. |
 | `aspireforge add telemetry` | An OpenTelemetry `ServiceDefaults` project (metrics, traces, logs, health checks), following Microsoft's own Aspire convention. |
 | `aspireforge add authentication` | JWT Bearer auth/authorization via ASP.NET Core's own middleware. |
@@ -135,16 +136,23 @@ Details and fixes for each: [security](docs/rules/security.md) ·
 
 ## Roadmap
 
-Deliberately not in v0.1, in rough order of what's next:
+v0.1 shipped the CLI, `new`, `doctor`, Postgres, Docker, health checks, OpenTelemetry, basic
+(JWT Bearer) authentication, 10 analysis rules, JSON output, tests, CI, and the NuGet package. v0.2
+adds Redis, SQL Server, SARIF, and per-project configuration - all shipped. Still ahead, in rough
+order of what's next:
 
+- **More security, performance, and architecture rules**, beyond the initial 10 - performance
+  checks especially, which don't have any coverage yet.
+- **MySQL** as another `add` database provider, alongside Postgres and SQL Server.
 - **`vertical-slice` architecture** as a second `--architecture` option alongside `clean`.
-- **SQL Server and MySQL** as additional `add` database providers, alongside Postgres.
 - **ASP.NET Core Identity, Entra ID, and Keycloak** as `add identity`/`add entra`/`add keycloak`,
   building on the JWT Bearer foundation `add authentication` already provides.
 - **`rules install <pack>`** - third-party rule packages built on the same `IAnalysisRule`
   contract as the built-in rules.
 - **A .NET Aspire AppHost option** for `new`, as an alternative to the generated
   `docker-compose.yml` for local orchestration.
+- **Better generated templates** - richer starting content in the generated Domain/Application
+  layers than today's empty scaffolding.
 - **`doctor --config <path>`** to point at a config file outside the default
   `.aspireforge/` discovery.
 

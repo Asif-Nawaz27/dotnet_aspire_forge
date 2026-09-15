@@ -1,5 +1,6 @@
 using AspireForge.Core.Features;
 using AspireForge.Core.Generation;
+using AspireForge.Generators.Database;
 using AspireForge.Generators.Observability;
 using AspireForge.Generators.Project;
 
@@ -39,6 +40,17 @@ public class GeneratedProjectBuildTests : IDisposable
 
         var context = new FeatureContext { ProjectName = "TelemetryApi", RootPath = root };
         await new TelemetryFeatureInstaller().InstallAsync(context);
+
+        DotnetCli.Run(["build"], root, SubprocessTimeout);
+    }
+
+    [Fact]
+    public async Task GeneratedProject_WithSqlServerAdded_StillBuildsSuccessfully()
+    {
+        var root = Generate("SqlServerApi");
+
+        var context = new FeatureContext { ProjectName = "SqlServerApi", RootPath = root };
+        await new EfCoreDatabaseFeatureInstaller(DatabaseProviders.SqlServer).InstallAsync(context);
 
         DotnetCli.Run(["build"], root, SubprocessTimeout);
     }

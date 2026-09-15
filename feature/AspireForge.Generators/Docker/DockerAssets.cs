@@ -28,7 +28,7 @@ internal static class DockerAssets
         **/*.md
         """;
 
-    public static string DockerCompose(string projectName, bool includePostgres, bool includeRedis)
+    public static string DockerCompose(string projectName, bool includePostgres, bool includeSqlServer, bool includeRedis)
     {
         var lines = new List<string>
         {
@@ -41,12 +41,16 @@ internal static class DockerAssets
             "      - \"8080:8080\"",
         };
 
-        if (includePostgres || includeRedis)
+        if (includePostgres || includeSqlServer || includeRedis)
         {
             lines.Add("    depends_on:");
             if (includePostgres)
             {
                 lines.Add("      - postgres");
+            }
+            if (includeSqlServer)
+            {
+                lines.Add("      - sqlserver");
             }
             if (includeRedis)
             {
@@ -72,6 +76,23 @@ internal static class DockerAssets
             ]);
         }
 
+        if (includeSqlServer)
+        {
+            lines.AddRange(
+            [
+                string.Empty,
+                "  sqlserver:",
+                "    image: mcr.microsoft.com/mssql/server:2022-latest",
+                "    environment:",
+                "      ACCEPT_EULA: \"Y\"",
+                "      MSSQL_SA_PASSWORD: Your_password123",
+                "    ports:",
+                "      - \"1433:1433\"",
+                "    volumes:",
+                "      - sqlserver-data:/var/opt/mssql",
+            ]);
+        }
+
         if (includeRedis)
         {
             lines.AddRange(
@@ -84,9 +105,19 @@ internal static class DockerAssets
             ]);
         }
 
-        if (includePostgres)
+        if (includePostgres || includeSqlServer)
         {
-            lines.AddRange([string.Empty, "volumes:", "  postgres-data:"]);
+            lines.AddRange([string.Empty, "volumes:"]);
+
+            if (includePostgres)
+            {
+                lines.Add("  postgres-data:");
+            }
+
+            if (includeSqlServer)
+            {
+                lines.Add("  sqlserver-data:");
+            }
         }
 
         return string.Join('\n', lines) + "\n";

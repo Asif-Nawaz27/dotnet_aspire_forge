@@ -23,7 +23,7 @@ AspireForge.Analyzers  AspireForge.Generators
   `ProjectAnalyzer` that runs them, and project/config discovery. See
   [Rule engine](rule-engine.md). Depends only on `Core`.
 - **`AspireForge.Generators`** - project generation (`CleanArchitectureGenerator`) and every
-  `IFeatureInstaller` (`postgres`, `redis`, `telemetry`, `docker`, `authentication`). Depends only
+  `IFeatureInstaller` (`postgres`, `sqlserver`, `redis`, `telemetry`, `docker`, `authentication`). Depends only
   on `Core`.
 - **`AspireForge.Cli`** - the command-line surface, built on
   [System.CommandLine](https://learn.microsoft.com/dotnet/standard/commandline/). Depends on all
