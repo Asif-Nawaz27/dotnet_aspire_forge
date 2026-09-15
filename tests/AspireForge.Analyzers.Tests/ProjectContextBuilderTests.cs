@@ -18,7 +18,7 @@ public class ProjectContextBuilderTests : IDisposable
               </PropertyGroup>
               <ItemGroup>
                 <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
-                <ProjectReference Include="..\ServiceDefaults\ServiceDefaults.csproj" />
+                <ProjectReference Include="../ServiceDefaults/ServiceDefaults.csproj" />
               </ItemGroup>
             </Project>
             """);
@@ -27,7 +27,7 @@ public class ProjectContextBuilderTests : IDisposable
 
         Assert.Equal("net10.0", context.TargetFramework);
         Assert.Contains("Swashbuckle.AspNetCore", context.PackageReferences);
-        Assert.Contains(@"..\ServiceDefaults\ServiceDefaults.csproj", context.ProjectReferences);
+        Assert.Contains("../ServiceDefaults/ServiceDefaults.csproj", context.ProjectReferences);
     }
 
     [Fact]
@@ -43,7 +43,7 @@ public class ProjectContextBuilderTests : IDisposable
             """
             <Project Sdk="Microsoft.NET.Sdk.Web">
               <ItemGroup>
-                <ProjectReference Include="..\ServiceDefaults\ServiceDefaults.csproj" />
+                <ProjectReference Include="../ServiceDefaults/ServiceDefaults.csproj" />
               </ItemGroup>
             </Project>
             """);
