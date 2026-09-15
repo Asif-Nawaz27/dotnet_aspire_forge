@@ -51,16 +51,47 @@ public static class ProjectContextBuilder
 
     private static string LoadProject(string path)
     {
-        var projectFile = Directory.Exists(path)
-            ? Directory.EnumerateFiles(path, "*.csproj", SearchOption.TopDirectoryOnly).FirstOrDefault()
-            : path;
-
-        if (projectFile is null || !File.Exists(projectFile))
+        if (!Directory.Exists(path))
         {
-            throw new FileNotFoundException($"No project file found at '{path}'.", path);
+            if (!File.Exists(path))
+            {
+                throw new FileNotFoundException($"No project file found at '{path}'.", path);
+            }
+
+            return Path.GetFullPath(path);
         }
 
-        return Path.GetFullPath(projectFile);
+        var topLevelProject = Directory.EnumerateFiles(path, "*.csproj", SearchOption.TopDirectoryOnly).FirstOrDefault();
+        if (topLevelProject is not null)
+        {
+            return Path.GetFullPath(topLevelProject);
+        }
+
+        // No project file directly in this directory. If it's a solution root laid out the way
+        // `aspireforge new` generates one, default to the Api project by convention instead of
+        // failing outright - that's what someone running `aspireforge doctor` right after
+        // `aspireforge new` from the solution root actually wants.
+        var conventionalApiProject = FindConventionalApiProject(path);
+        if (conventionalApiProject is not null)
+        {
+            return Path.GetFullPath(conventionalApiProject);
+        }
+
+        throw new FileNotFoundException($"No project file found at '{path}'.", path);
+    }
+
+    private static string? FindConventionalApiProject(string path)
+    {
+        var solutionFile = Directory.EnumerateFiles(path, "*.sln*", SearchOption.TopDirectoryOnly).FirstOrDefault();
+        if (solutionFile is null)
+        {
+            return null;
+        }
+
+        var solutionName = Path.GetFileNameWithoutExtension(solutionFile);
+        var apiProject = Path.Combine(path, "src", $"{solutionName}.Api", $"{solutionName}.Api.csproj");
+
+        return File.Exists(apiProject) ? apiProject : null;
     }
 
     private static string? ReadTargetFramework(XDocument document)

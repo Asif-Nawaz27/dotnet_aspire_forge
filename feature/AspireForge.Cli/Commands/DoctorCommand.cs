@@ -20,7 +20,18 @@ public class DoctorCommand(ConsoleRenderer renderer)
         OutputFormat format = OutputFormat.Text,
         CancellationToken cancellationToken = default)
     {
-        var context = ProjectContextBuilder.Build(path);
+        ProjectContext context;
+
+        try
+        {
+            context = ProjectContextBuilder.Build(path);
+        }
+        catch (FileNotFoundException)
+        {
+            renderer.WriteLine($"No project file found at '{path}'.");
+            return ExitCodes.InvalidConfiguration;
+        }
+
         var config = ConfigLoader.Load(context.RootDirectory);
         var rules = AnalysisRuleSet.ApplyConfig(AnalysisRuleSet.CreateDefault(), config);
         var analyzer = new ProjectAnalyzer(rules);
