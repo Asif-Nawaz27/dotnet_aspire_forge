@@ -1,8 +1,7 @@
 namespace AspireForge.Generators.Database;
 
-// Only Postgres is wired up for now. SQL Server and MySQL become additional entries here
-// (Microsoft.EntityFrameworkCore.SqlServer/UseSqlServer, Pomelo.EntityFrameworkCore.MySql/UseMySql)
-// once they're actually implemented - EfCoreDatabaseFeatureInstaller doesn't need to change.
+// MySQL becomes another entry here (Pomelo.EntityFrameworkCore.MySql/UseMySql) once it's actually
+// implemented - EfCoreDatabaseFeatureInstaller doesn't need to change.
 public static class DatabaseProviders
 {
     public static readonly DatabaseProvider Postgres = new(
@@ -12,4 +11,13 @@ public static class DatabaseProviders
         EfCorePackageName: "Npgsql.EntityFrameworkCore.PostgreSQL",
         UseMethodName: "UseNpgsql",
         ConnectionString: projectName => $"Host=localhost;Database={projectName};Username=postgres;Password=postgres");
+
+    public static readonly DatabaseProvider SqlServer = new(
+        Id: "sqlserver",
+        DisplayName: "SQL Server",
+        ConnectionStringName: "SqlServer",
+        EfCorePackageName: "Microsoft.EntityFrameworkCore.SqlServer",
+        UseMethodName: "UseSqlServer",
+        ConnectionString: projectName =>
+            $"Server=localhost;Database={projectName};User Id=sa;Password=Your_password123;TrustServerCertificate=True;");
 }

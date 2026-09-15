@@ -14,6 +14,7 @@ public class AddCommand(ConsoleRenderer renderer)
         new IFeatureInstaller[]
         {
             new EfCoreDatabaseFeatureInstaller(DatabaseProviders.Postgres),
+            new EfCoreDatabaseFeatureInstaller(DatabaseProviders.SqlServer),
             new RedisFeatureInstaller(),
             new TelemetryFeatureInstaller(),
             new DockerFeatureInstaller(),

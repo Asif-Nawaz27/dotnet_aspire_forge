@@ -32,11 +32,12 @@ public sealed class DockerFeatureInstaller : IFeatureInstaller
             cancellationToken);
 
         var includePostgres = AppSettingsEditor.HasConnectionString(appsettingsPath, DatabaseProviders.Postgres.ConnectionStringName);
+        var includeSqlServer = AppSettingsEditor.HasConnectionString(appsettingsPath, DatabaseProviders.SqlServer.ConnectionStringName);
         var includeRedis = AppSettingsEditor.HasConnectionString(appsettingsPath, RedisFeatureInstaller.ConnectionStringName);
 
         await File.WriteAllTextAsync(
             Path.Combine(context.RootPath, "docker-compose.yml"),
-            DockerAssets.DockerCompose(context.ProjectName, includePostgres, includeRedis),
+            DockerAssets.DockerCompose(context.ProjectName, includePostgres, includeSqlServer, includeRedis),
             cancellationToken);
 
         return ["Added Dockerfile", "Added .dockerignore", "Added docker-compose.yml"];
