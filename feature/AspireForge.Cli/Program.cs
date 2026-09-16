@@ -12,6 +12,7 @@ var root = new RootCommand("AspireForge - opinionated .NET Aspire project scaffo
 root.Subcommands.Add(BuildNewCommand());
 root.Subcommands.Add(BuildAddCommand());
 root.Subcommands.Add(BuildDoctorCommand());
+root.Subcommands.Add(BuildFixCommand());
 root.Subcommands.Add(BuildRulesCommand());
 root.Subcommands.Add(BuildVersionCommand());
 root.Subcommands.Add(BuildHelpCommand(root));
@@ -92,6 +93,21 @@ static Command BuildDoctorCommand()
             parseResult.GetValue(failOnOption),
             parseResult.GetValue(formatOption),
             cancellationToken));
+
+    return command;
+}
+
+static Command BuildFixCommand()
+{
+    var ruleIdArgument = new Argument<string>("ruleId")
+    {
+        Description = "The rule ID to fix, e.g. REL001.",
+    };
+
+    var command = new Command("fix", "Automatically fix a specific rule finding.") { ruleIdArgument };
+
+    command.SetAction(parseResult =>
+        new FixCommand(new ConsoleRenderer()).RunAsync(parseResult.GetValue(ruleIdArgument)!));
 
     return command;
 }

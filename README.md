@@ -109,11 +109,12 @@ scanning. `--fail-on warning` makes CI fail on warnings, not just errors. Detail
 | `aspireforge add authentication` | JWT Bearer auth/authorization via ASP.NET Core's own middleware. |
 | `aspireforge add docker` | (Re)generates Docker assets, aware of whatever databases/caches are already configured. |
 | `aspireforge doctor` | Analyzes a project; text, JSON, or SARIF output. |
+| `aspireforge fix <ruleId>` | Automatically resolves a single rule finding (e.g. `aspireforge fix REL001`). |
 | `aspireforge rules list` | Prints the full rule catalog. |
 
 Full command reference: [`new`](docs/commands/new.md) · [`add`](docs/commands/add.md) ·
-[`doctor`](docs/commands/doctor.md). Rules can be tuned per project via
-[`.aspireforge/config.json`](docs/architecture/rule-engine.md#configuration).
+[`doctor`](docs/commands/doctor.md) · [`fix`](docs/commands/fix.md). Rules can be tuned per project
+via [`.aspireforge/config.json`](docs/architecture/rule-engine.md#configuration).
 
 ## Supported rules
 
@@ -138,17 +139,23 @@ Details and fixes for each: [security](docs/rules/security.md) ·
 
 v0.1 shipped the CLI, `new`, `doctor`, Postgres, Docker, health checks, OpenTelemetry, basic
 (JWT Bearer) authentication, 10 analysis rules, JSON output, tests, CI, and the NuGet package. v0.2
-adds Redis, SQL Server, SARIF, and per-project configuration - all shipped. Still ahead, in rough
-order of what's next:
+added Redis, SQL Server, SARIF, and per-project configuration. v0.3 adds `fix` - shipped. Still
+ahead, in rough order of what's next:
 
+- **`aspireforge update`** to pull in newer versions of AspireForge-generated scaffolding (Docker
+  assets, CI workflow, etc.) into an existing project.
+- **`rules install <pack>`** - third-party rule packages built on the same `IAnalysisRule`
+  contract as the built-in rules.
+- **A distributable GitHub Action** wrapping `aspireforge doctor`, so other repos can run it in CI
+  without hand-writing the workflow steps AspireForge's own [`ci.yml`](.github/workflows/ci.yml) uses.
 - **More security, performance, and architecture rules**, beyond the initial 10 - performance
   checks especially, which don't have any coverage yet.
+- **More fixes** - most of the 10 rules don't have an automatic fix yet; see
+  [`fix`](docs/commands/fix.md#fixable-rules-today) for which do and why the rest don't.
 - **MySQL** as another `add` database provider, alongside Postgres and SQL Server.
 - **`vertical-slice` architecture** as a second `--architecture` option alongside `clean`.
 - **ASP.NET Core Identity, Entra ID, and Keycloak** as `add identity`/`add entra`/`add keycloak`,
   building on the JWT Bearer foundation `add authentication` already provides.
-- **`rules install <pack>`** - third-party rule packages built on the same `IAnalysisRule`
-  contract as the built-in rules.
 - **A .NET Aspire AppHost option** for `new`, as an alternative to the generated
   `docker-compose.yml` for local orchestration.
 - **Better generated templates** - richer starting content in the generated Domain/Application
