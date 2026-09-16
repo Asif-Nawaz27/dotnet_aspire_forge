@@ -2,6 +2,7 @@ using AspireForge.Analyzers.Rules.Architecture;
 
 namespace AspireForge.Analyzers.Tests.Rules.Architecture;
 
+//Special test
 public class ARCH001Tests
 {
     private readonly ARCH001ApiDirectlyAccessesPersistenceLayer _rule = new();
