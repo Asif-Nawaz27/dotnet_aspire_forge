@@ -17,8 +17,8 @@ AspireForge.Analyzers  AspireForge.Generators
 
 - **`AspireForge.Core`** - the domain model shared by everything else: `AnalysisIssue`,
   `AnalysisResult`, `ProjectContext`, `Severity`, `GenerationOptions`/`GenerationResult`,
-  `FeatureContext`/`FeatureDefinition`/`IFeatureInstaller`, and the `.aspireforge/config.json`
-  model. Has no dependencies of its own.
+  `FeatureContext`/`FeatureDefinition`/`IFeatureInstaller`/`IRuleFix`, and the
+  `.aspireforge/config.json` model. Has no dependencies of its own.
 - **`AspireForge.Analyzers`** - the rule engine: the 10 `IAnalysisRule` implementations, the
   `ProjectAnalyzer` that runs them, and project/config discovery. See
   [Rule engine](rule-engine.md). Depends only on `Core`.
@@ -66,6 +66,17 @@ path) and returns the list of steps it performed. `new` and `add` share this sam
 `new` runs a fixed set of installers (README, `.gitignore`, Docker, CI) after generation, and `add`
 runs one installer chosen by name. See [Features](../features/postgres.md) for what each one does.
 
+## Fixes
+
+`aspireforge fix <ruleId>` (see [`fix`](../commands/fix.md)) is the remediation counterpart to a
+rule: where `IAnalysisRule` only detects a problem, `IRuleFix` knows how to resolve it. The two
+interfaces are deliberately separate, the same way a linter's diagnostic and its code-fix provider
+are independent - not every rule has (or needs) a fix. `RuleFixSet` (in `Generators`) is the
+registry mapping a rule ID to its `IRuleFix`, and each fix itself lives under
+`Generators/Fixes/` and operates on the same `FeatureContext` (project name + root path) that
+feature installers use, editing the generated project's source directly (e.g. `Program.cs`) via
+`ProgramFileEditor`.
+
 ## Configuration
 
 A project can carry a `.aspireforge/config.json` file to enable/disable individual rules or
@@ -80,7 +91,7 @@ Every command shares one exit-code scheme:
 | `0` | Successful. |
 | `1` | `doctor` found an issue at or above `--fail-on`. |
 | `2` | Invalid command or configuration (bad arguments, missing solution file, unrecognized command). |
-| `3` | Generation or feature-install failure. |
+| `3` | Generation, feature-install, or fix failure. |
 
 ## NuGet package strategy
 
