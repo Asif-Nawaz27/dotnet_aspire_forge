@@ -12,7 +12,7 @@ Thanks for your interest in contributing.
 
 - `feature/` — the CLI, Core, Analyzers, and Generators projects
 - `tests/` — unit and integration tests, one project per `feature/` project
-- `samples/` — example projects generated with AspireForge
+- `app/` — example projects generated with AspireForge, part of `AspireForge.slnx`
 - `docs/` — user and contributor documentation
 
 ## Submitting changes

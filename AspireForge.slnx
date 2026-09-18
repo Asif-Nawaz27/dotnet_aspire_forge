@@ -12,4 +12,12 @@
     <Project Path="tests/AspireForge.Generators.Tests/AspireForge.Generators.Tests.csproj" />
     <Project Path="tests/AspireForge.IntegrationTests/AspireForge.IntegrationTests.csproj" />
   </Folder>
+  <Folder Name="/app/">
+    <Project Path="app/src/App.Domain/App.Domain.csproj" />
+    <Project Path="app/src/App.Application/App.Application.csproj" />
+    <Project Path="app/src/App.Infrastructure/App.Infrastructure.csproj" />
+    <Project Path="app/src/App.ServiceDefaults/App.ServiceDefaults.csproj" />
+    <Project Path="app/src/App.Api/App.Api.csproj" />
+    <Project Path="app/tests/App.IntegrationTests/App.IntegrationTests.csproj" />
+  </Folder>
 </Solution>
