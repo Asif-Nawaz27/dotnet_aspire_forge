@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\feature\AspireForge.Analyzers\AspireForge.Analyzers.csproj" />
+    <ProjectReference Include="..\..\Feature\AspireForge.Analyzers\AspireForge.Analyzers.csproj" />
   </ItemGroup>
 
 </Project>
