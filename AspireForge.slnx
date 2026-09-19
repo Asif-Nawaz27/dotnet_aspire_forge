@@ -1,23 +1,23 @@
 <Solution>
-  <Folder Name="/feature/">
-    <Project Path="feature/AspireForge.Analyzers/AspireForge.Analyzers.csproj" />
-    <Project Path="feature/AspireForge.Cli/AspireForge.Cli.csproj" />
-    <Project Path="feature/AspireForge.Core/AspireForge.Core.csproj" />
-    <Project Path="feature/AspireForge.Generators/AspireForge.Generators.csproj" />
+  <Folder Name="/Feature/">
+    <Project Path="Feature/AspireForge.Analyzers/AspireForge.Analyzers.csproj" />
+    <Project Path="Feature/AspireForge.Cli/AspireForge.Cli.csproj" />
+    <Project Path="Feature/AspireForge.Core/AspireForge.Core.csproj" />
+    <Project Path="Feature/AspireForge.Generators/AspireForge.Generators.csproj" />
   </Folder>
-  <Folder Name="/tests/">
-    <Project Path="tests/AspireForge.Analyzers.Tests/AspireForge.Analyzers.Tests.csproj" />
-    <Project Path="tests/AspireForge.Cli.Tests/AspireForge.Cli.Tests.csproj" />
-    <Project Path="tests/AspireForge.Core.Tests/AspireForge.Core.Tests.csproj" />
-    <Project Path="tests/AspireForge.Generators.Tests/AspireForge.Generators.Tests.csproj" />
-    <Project Path="tests/AspireForge.IntegrationTests/AspireForge.IntegrationTests.csproj" />
+  <Folder Name="/Tests/">
+    <Project Path="Tests/AspireForge.Analyzers.Tests/AspireForge.Analyzers.Tests.csproj" />
+    <Project Path="Tests/AspireForge.Cli.Tests/AspireForge.Cli.Tests.csproj" />
+    <Project Path="Tests/AspireForge.Core.Tests/AspireForge.Core.Tests.csproj" />
+    <Project Path="Tests/AspireForge.Generators.Tests/AspireForge.Generators.Tests.csproj" />
+    <Project Path="Tests/AspireForge.IntegrationTests/AspireForge.IntegrationTests.csproj" />
   </Folder>
-  <Folder Name="/app/">
-    <Project Path="app/src/App.Domain/App.Domain.csproj" />
-    <Project Path="app/src/App.Application/App.Application.csproj" />
-    <Project Path="app/src/App.Infrastructure/App.Infrastructure.csproj" />
-    <Project Path="app/src/App.ServiceDefaults/App.ServiceDefaults.csproj" />
-    <Project Path="app/src/App.Api/App.Api.csproj" />
-    <Project Path="app/tests/App.IntegrationTests/App.IntegrationTests.csproj" />
+  <Folder Name="/App/">
+    <Project Path="App/Feature/App.Domain/App.Domain.csproj" />
+    <Project Path="App/Feature/App.Application/App.Application.csproj" />
+    <Project Path="App/Feature/App.Infrastructure/App.Infrastructure.csproj" />
+    <Project Path="App/Feature/App.ServiceDefaults/App.ServiceDefaults.csproj" />
+    <Project Path="App/Feature/App.Api/App.Api.csproj" />
+    <Project Path="App/Tests/App.IntegrationTests/App.IntegrationTests.csproj" />
   </Folder>
 </Solution>

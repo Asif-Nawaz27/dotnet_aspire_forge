@@ -13,12 +13,12 @@ aspireforge add authentication
 
 ## Layout
 
-- `src/App.Domain` - entities and business rules with no outward dependencies.
-- `src/App.Application` - use cases and abstractions, depends only on Domain.
-- `src/App.Infrastructure` - implementations of Application abstractions (persistence, external services).
-- `src/App.ServiceDefaults` - OpenTelemetry metrics, traces, logs, and health checks (added by `add telemetry`).
-- `src/App.Api` - the ASP.NET Core host and composition root.
-- `tests/App.IntegrationTests` - end-to-end tests against the Api.
+- `Feature/App.Domain` - entities and business rules with no outward dependencies.
+- `Feature/App.Application` - use cases and abstractions, depends only on Domain.
+- `Feature/App.Infrastructure` - implementations of Application abstractions (persistence, external services).
+- `Feature/App.ServiceDefaults` - OpenTelemetry metrics, traces, logs, and health checks (added by `add telemetry`).
+- `Feature/App.Api` - the ASP.NET Core host and composition root.
+- `Tests/App.IntegrationTests` - end-to-end tests against the Api.
 
 ## Getting started
 
@@ -26,9 +26,9 @@ This project is part of the root [`AspireForge.slnx`](../AspireForge.slnx) rathe
 solution, so build/test by project path:
 
 ```bash
-dotnet build src/App.Api
-dotnet test tests/App.IntegrationTests
-dotnet run --project src/App.Api
+dotnet build Feature/App.Api
+dotnet test Tests/App.IntegrationTests
+dotnet run --project Feature/App.Api
 ```
 
 ## Before / after
@@ -86,7 +86,7 @@ Architecture
 Production Readiness: 7/10
 ```
 
-Run `aspireforge doctor src/App.Api` yourself to reproduce this. The three remaining warnings are
+Run `aspireforge doctor Feature/App.Api` yourself to reproduce this. The three remaining warnings are
 intentional, not a sample bug: global exception handling and a dedicated unit test project have no
 automatic fix yet (see [`fix`](../docs/commands/fix.md#fixable-rules-today)), and the architecture
 check flags the Api project's direct EF Core reference - a real, known trade-off of today's
