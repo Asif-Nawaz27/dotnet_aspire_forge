@@ -19,10 +19,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\feature\AspireForge.Cli\AspireForge.Cli.csproj" />
-    <ProjectReference Include="..\..\feature\AspireForge.Core\AspireForge.Core.csproj" />
-    <ProjectReference Include="..\..\feature\AspireForge.Analyzers\AspireForge.Analyzers.csproj" />
-    <ProjectReference Include="..\..\feature\AspireForge.Generators\AspireForge.Generators.csproj" />
+    <ProjectReference Include="..\..\Feature\AspireForge.Cli\AspireForge.Cli.csproj" />
+    <ProjectReference Include="..\..\Feature\AspireForge.Core\AspireForge.Core.csproj" />
+    <ProjectReference Include="..\..\Feature\AspireForge.Analyzers\AspireForge.Analyzers.csproj" />
+    <ProjectReference Include="..\..\Feature\AspireForge.Generators\AspireForge.Generators.csproj" />
   </ItemGroup>
 
 </Project>

@@ -10,8 +10,8 @@ Thanks for your interest in contributing.
 
 ## Project layout
 
-- `feature/` — the CLI, Core, Analyzers, and Generators projects
-- `tests/` — unit and integration tests, one project per `feature/` project
+- `Feature/` — the CLI, Core, Analyzers, and Generators projects
+- `Tests/` — unit and integration tests, one project per `Feature/` project
 - `App/` — example project generated with AspireForge, part of `AspireForge.slnx`
 - `docs/` — user and contributor documentation
 

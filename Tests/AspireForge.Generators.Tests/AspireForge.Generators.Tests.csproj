@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\feature\AspireForge.Core\AspireForge.Core.csproj" />
+    <ProjectReference Include="..\..\Feature\AspireForge.Generators\AspireForge.Generators.csproj" />
   </ItemGroup>
 
 </Project>
