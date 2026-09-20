@@ -30,7 +30,7 @@ Re-running `aspireforge doctor` afterward no longer reports that rule.
 | REL001 | Adds `builder.Services.AddHealthChecks()` and `app.MapHealthChecks("/health")` directly to `Api`'s `Program.cs`. |
 | SEC003 | Adds `app.UseHttpsRedirection()` to `Api`'s `Program.cs`. |
 
-Most of the [10 rules](../architecture/rule-engine.md) don't have an automatic fix yet:
+Most of the [13 rules](../architecture/rule-engine.md) don't have an automatic fix yet:
 
 - **SEC001, OBS001, OBS002** already have a richer fix via [`add`](add.md) (`add authentication`,
   `add telemetry`) that does more than a one-line edit would.
@@ -39,6 +39,10 @@ Most of the [10 rules](../architecture/rule-engine.md) don't have an automatic f
 - **TEST001, TEST002** need a whole new test project generated, not a source edit.
 - **SEC002, REL002** need a decision only you can make (what CORS origins to allow; what an
   exception handler should actually do), so there's no single safe default to apply.
+- **PERF001, PERF002** (response compression, rate limiting) are realistic candidates for a future
+  one-line fix like REL001's - just not implemented yet.
+- **PERF003** (a blocking call found in your code) has no safe default rewrite; only you know what
+  the correct `await`-based replacement should look like.
 
 Running `fix` against one of these prints the current list of fixable rule IDs and exits with code
 `2` rather than guessing.

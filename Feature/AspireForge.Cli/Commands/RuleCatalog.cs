@@ -16,5 +16,8 @@ public static class RuleCatalog
         new("Testing", "TEST001", "Unit tests", "Unit tests detected"),
         new("Testing", "TEST002", "Integration tests", "Integration tests detected"),
         new("Architecture", "ARCH001", "Dependency violations", "No obvious dependency violations"),
+        new("Performance", "PERF001", "Response compression", "Response compression configured"),
+        new("Performance", "PERF002", "Rate limiting", "Rate limiting configured"),
+        new("Performance", "PERF003", "Blocking calls", "No blocking calls on async code"),
     ];
 }
