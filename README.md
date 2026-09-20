@@ -21,7 +21,7 @@ aspireforge doctor
 AspireForge is a .NET global tool with three jobs: **generate** a clean-architecture ASP.NET Core
 solution, **add** production concerns to it (a database, caching, telemetry, auth, Docker) on
 demand, and **audit** any project against a rule set covering security, reliability,
-observability, testing, and architecture - in plain text, JSON, or SARIF for CI.
+observability, testing, architecture, and performance - in plain text, JSON, or SARIF for CI.
 
 ## Why it exists
 
@@ -84,10 +84,15 @@ Testing
 Architecture
   ✓ No obvious dependency violations
 
+Performance
+  ⚠ Response compression missing
+  ⚠ Rate limiting missing
+  ✓ No blocking calls on async code
+
 --------------------------------
 Errors:   0
-Warnings: 6
-Passed:   4
+Warnings: 8
+Passed:   5
 --------------------------------
 
 Production Readiness: 4/10
@@ -129,18 +134,25 @@ via [`.aspireforge/config.json`](docs/architecture/rule-engine.md#configuration)
 | OBS002 | Observability | Structured logging configured | info |
 | TEST001 | Testing | A matching unit test project exists | warning |
 | TEST002 | Testing | An integration test project exists | info |
-| ARCH001 | Architecture | Api doesn't reference persistence packages directly | warning |
+| ARCH001 | Architecture | Api doesn't reference *and use* persistence packages directly | warning |
+| PERF001 | Performance | Response compression configured | suggestion |
+| PERF002 | Performance | Rate limiting configured | suggestion |
+| PERF003 | Performance | No blocking calls (`.Wait()`, `.GetAwaiter().GetResult()`) on async code | warning |
 
 Details and fixes for each: [security](docs/rules/security.md) ·
 [reliability](docs/rules/reliability.md) · [observability](docs/rules/observability.md) ·
-[testing](docs/rules/testing.md) · [architecture](docs/rules/architecture.md).
+[testing](docs/rules/testing.md) · [architecture](docs/rules/architecture.md) ·
+[performance](docs/rules/performance.md).
 
 ## Roadmap
 
 v0.1 shipped the CLI, `new`, `doctor`, Postgres, Docker, health checks, OpenTelemetry, basic
 (JWT Bearer) authentication, 10 analysis rules, JSON output, tests, CI, and the NuGet package. v0.2
-added Redis, SQL Server, SARIF, and per-project configuration. v0.3 adds `fix` - shipped. Still
-ahead, in rough order of what's next:
+added Redis, SQL Server, SARIF, and per-project configuration. v0.3 added `fix` and a first
+Performance category (`PERF001`-`PERF003`), plus made rule detection smarter where it mattered
+most: `ARCH001` now checks that a persistence package is actually *used* in `Api`'s own code, not
+just referenced, and every text-based rule ignores matches inside comments. Still ahead, in rough
+order of what's next:
 
 - **`aspireforge update`** to pull in newer versions of AspireForge-generated scaffolding (Docker
   assets, CI workflow, etc.) into an existing project.
@@ -148,9 +160,9 @@ ahead, in rough order of what's next:
   contract as the built-in rules.
 - **A distributable GitHub Action** wrapping `aspireforge doctor`, so other repos can run it in CI
   without hand-writing the workflow steps AspireForge's own [`ci.yml`](.github/workflows/ci.yml) uses.
-- **More security, performance, and architecture rules**, beyond the initial 10 - performance
-  checks especially, which don't have any coverage yet.
-- **More fixes** - most of the 10 rules don't have an automatic fix yet; see
+- **More security, performance, and architecture rules**, and pushing more of them past plain text
+  search toward real Roslyn semantic analysis, closer to what a compiler actually sees.
+- **More fixes** - most of the 13 rules don't have an automatic fix yet; see
   [`fix`](docs/commands/fix.md#fixable-rules-today) for which do and why the rest don't.
 - **MySQL** as another `add` database provider, alongside Postgres and SQL Server.
 - **`vertical-slice` architecture** as a second `--architecture` option alongside `clean`.

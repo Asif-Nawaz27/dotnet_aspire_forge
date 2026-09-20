@@ -35,7 +35,13 @@ The input every rule receives:
 
 Most rules use the shared `SourceFileHeuristics` helper to check whether the project looks like an
 ASP.NET Core web app (`WebApplication.CreateBuilder` present) and to search source text for a
-token, rather than re-implementing file scanning themselves.
+token, rather than re-implementing file scanning themselves. That search strips `//` and `/* */`
+comments first, so a token only mentioned in a comment doesn't count as real usage - this is still
+plain text search, not a C# parser, so it doesn't understand string literals (a URL's `://` is
+specifically guarded against, since it's the common case, but it isn't a general solution).
+`SourceFileHeuristics.OwnSourceFiles` narrows `SourceFiles` down to just the analyzed project's own
+files, for rules like ARCH001 that need to tell "this project's own code uses X" apart from "X is
+merely reachable through `SourceFiles`'s referenced-project files."
 
 ## `ProjectAnalyzer`
 

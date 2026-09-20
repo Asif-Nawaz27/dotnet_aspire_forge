@@ -19,7 +19,7 @@ AspireForge.Analyzers  AspireForge.Generators
   `AnalysisResult`, `ProjectContext`, `Severity`, `GenerationOptions`/`GenerationResult`,
   `FeatureContext`/`FeatureDefinition`/`IFeatureInstaller`/`IRuleFix`, and the
   `.aspireforge/config.json` model. Has no dependencies of its own.
-- **`AspireForge.Analyzers`** - the rule engine: the 10 `IAnalysisRule` implementations, the
+- **`AspireForge.Analyzers`** - the rule engine: the 13 `IAnalysisRule` implementations, the
   `ProjectAnalyzer` that runs them, and project/config discovery. See
   [Rule engine](rule-engine.md). Depends only on `Core`.
 - **`AspireForge.Generators`** - project generation (`CleanArchitectureGenerator`) and every

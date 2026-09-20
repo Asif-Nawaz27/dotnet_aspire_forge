@@ -56,11 +56,16 @@ Testing
 Architecture
   ✓ No obvious dependency violations
 
+Performance
+  ⚠ Response compression missing
+  ⚠ Rate limiting missing
+  ✓ No blocking calls on async code
+
 Production Readiness: 4/10
 ```
 
 This project - the same starting scaffold, then `add postgres`/`add telemetry`/`add
-authentication` - reports **7/10**:
+authentication` - reports **6/10**:
 
 ```
 Security
@@ -83,14 +88,20 @@ Testing
 Architecture
   ⚠ API directly accesses persistence layer
 
-Production Readiness: 7/10
+Performance
+  ⚠ Response compression missing
+  ⚠ Rate limiting missing
+  ✓ No blocking calls on async code
+
+Production Readiness: 6/10
 ```
 
-Run `aspireforge doctor Feature/App.Api` yourself to reproduce this. The three remaining warnings are
-intentional, not a sample bug: global exception handling and a dedicated unit test project have no
-automatic fix yet (see [`fix`](../docs/commands/fix.md#fixable-rules-today)), and the architecture
-check flags the Api project's direct EF Core reference - a real, known trade-off of today's
-`add postgres`.
+Run `aspireforge doctor Feature/App.Api` yourself to reproduce this. The five remaining warnings are
+intentional, not a sample bug: global exception handling, a dedicated unit test project, response
+compression, and rate limiting have no automatic fix yet (see
+[`fix`](../docs/commands/fix.md#fixable-rules-today)), and the architecture check flags the Api
+project's direct EF Core reference - a real, known trade-off of today's `add postgres` (see
+[architecture rules](../docs/rules/architecture.md) for why that one specifically still fires here).
 
 ## Note on `Directory.Packages.props`
 

@@ -29,6 +29,17 @@ public class SEC001Tests
     }
 
     [Fact]
+    public async Task Fires_WhenAuthenticationIsOnlyMentionedInAComment()
+    {
+        using var project = TestProject.Create(
+            "var builder = WebApplication.CreateBuilder(args);\n// TODO: builder.Services.AddAuthentication();");
+
+        var issue = await _rule.EvaluateAsync(project.Context);
+
+        Assert.NotNull(issue);
+    }
+
+    [Fact]
     public async Task DoesNotFire_WhenNotAWebProject()
     {
         using var project = TestProject.Create("public class Worker { }");

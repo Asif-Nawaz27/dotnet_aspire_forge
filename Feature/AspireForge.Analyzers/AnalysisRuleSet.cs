@@ -1,5 +1,6 @@
 using AspireForge.Analyzers.Rules.Architecture;
 using AspireForge.Analyzers.Rules.Observability;
+using AspireForge.Analyzers.Rules.Performance;
 using AspireForge.Analyzers.Rules.Reliability;
 using AspireForge.Analyzers.Rules.Security;
 using AspireForge.Analyzers.Rules.Testing;
@@ -22,6 +23,9 @@ public static class AnalysisRuleSet
         new TEST001NoTestProjectDetected(),
         new TEST002NoIntegrationTestsDetected(),
         new ARCH001ApiDirectlyAccessesPersistenceLayer(),
+        new PERF001ResponseCompressionMissing(),
+        new PERF002RateLimitingMissing(),
+        new PERF003BlockingCallOnAsyncCode(),
     ];
 
     public static IReadOnlyList<IAnalysisRule> ApplyConfig(IReadOnlyList<IAnalysisRule> rules, AspireForgeConfig config) =>
