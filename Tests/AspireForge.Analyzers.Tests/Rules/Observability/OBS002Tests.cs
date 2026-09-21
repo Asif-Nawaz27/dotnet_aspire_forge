@@ -18,14 +18,27 @@ public class OBS002Tests
     }
 
     [Fact]
-    public async Task DoesNotFire_WhenASerilogPackageReferenceIsPresent()
+    public async Task DoesNotFire_WhenSerilogIsReferencedAndWiredUp()
+    {
+        using var project = TestProject.Create(
+            "var builder = WebApplication.CreateBuilder(args);\nbuilder.Host.UseSerilog();",
+            packageReferences: ["Serilog.AspNetCore"]);
+
+        var issue = await _rule.EvaluateAsync(project.Context);
+
+        Assert.Null(issue);
+    }
+
+    [Fact]
+    public async Task Fires_WhenSerilogIsReferencedButNeverWiredUp()
     {
         using var project = TestProject.Create(
             "var builder = WebApplication.CreateBuilder(args);", packageReferences: ["Serilog.AspNetCore"]);
 
         var issue = await _rule.EvaluateAsync(project.Context);
 
-        Assert.Null(issue);
+        Assert.NotNull(issue);
+        Assert.Contains("referenced", issue!.Description);
     }
 
     [Fact]

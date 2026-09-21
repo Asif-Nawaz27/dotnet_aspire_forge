@@ -18,14 +18,29 @@ public class REL001Tests
     }
 
     [Fact]
-    public async Task DoesNotFire_WhenHealthChecksAreConfigured()
+    public async Task DoesNotFire_WhenHealthChecksAreConfiguredAndMapped()
+    {
+        using var project = TestProject.Create(
+            "var builder = WebApplication.CreateBuilder(args);\n"
+                + "builder.Services.AddHealthChecks();\n"
+                + "var app = builder.Build();\n"
+                + "app.MapHealthChecks(\"/health\");");
+
+        var issue = await _rule.EvaluateAsync(project.Context);
+
+        Assert.Null(issue);
+    }
+
+    [Fact]
+    public async Task Fires_WhenHealthChecksAreRegisteredButNotMapped()
     {
         using var project = TestProject.Create(
             "var builder = WebApplication.CreateBuilder(args);\nbuilder.Services.AddHealthChecks();");
 
         var issue = await _rule.EvaluateAsync(project.Context);
 
-        Assert.Null(issue);
+        Assert.NotNull(issue);
+        Assert.Contains("MapHealthChecks", issue!.Description);
     }
 
     [Fact]

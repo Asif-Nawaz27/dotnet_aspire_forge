@@ -18,14 +18,29 @@ public class SEC001Tests
     }
 
     [Fact]
-    public async Task DoesNotFire_WhenAuthenticationIsConfigured()
+    public async Task DoesNotFire_WhenAuthenticationIsConfiguredAndMiddlewareIsAdded()
+    {
+        using var project = TestProject.Create(
+            "var builder = WebApplication.CreateBuilder(args);\n"
+                + "builder.Services.AddAuthentication();\n"
+                + "var app = builder.Build();\n"
+                + "app.UseAuthentication();");
+
+        var issue = await _rule.EvaluateAsync(project.Context);
+
+        Assert.Null(issue);
+    }
+
+    [Fact]
+    public async Task Fires_WhenAuthenticationIsRegisteredButMiddlewareIsNotAdded()
     {
         using var project = TestProject.Create(
             "var builder = WebApplication.CreateBuilder(args);\nbuilder.Services.AddAuthentication();");
 
         var issue = await _rule.EvaluateAsync(project.Context);
 
-        Assert.Null(issue);
+        Assert.NotNull(issue);
+        Assert.Contains("UseAuthentication", issue!.Description);
     }
 
     [Fact]
