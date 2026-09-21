@@ -115,11 +115,13 @@ scanning. `--fail-on warning` makes CI fail on warnings, not just errors. Detail
 | `aspireforge add docker` | (Re)generates Docker assets, aware of whatever databases/caches are already configured. |
 | `aspireforge doctor` | Analyzes a project; text, JSON, or SARIF output. |
 | `aspireforge fix <ruleId>` | Automatically resolves a single rule finding (e.g. `aspireforge fix REL001`). |
+| `aspireforge update` | Refreshes AspireForge-generated scaffolding (`.gitignore`, Docker, CI) in an existing project. |
 | `aspireforge rules list` | Prints the full rule catalog. |
 
 Full command reference: [`new`](docs/commands/new.md) · [`add`](docs/commands/add.md) ·
-[`doctor`](docs/commands/doctor.md) · [`fix`](docs/commands/fix.md). Rules can be tuned per project
-via [`.aspireforge/config.json`](docs/architecture/rule-engine.md#configuration).
+[`doctor`](docs/commands/doctor.md) · [`fix`](docs/commands/fix.md) ·
+[`update`](docs/commands/update.md). Rules can be tuned per project via
+[`.aspireforge/config.json`](docs/architecture/rule-engine.md#configuration).
 
 ## Supported rules
 
@@ -148,14 +150,13 @@ Details and fixes for each: [security](docs/rules/security.md) ·
 
 v0.1 shipped the CLI, `new`, `doctor`, Postgres, Docker, health checks, OpenTelemetry, basic
 (JWT Bearer) authentication, 10 analysis rules, JSON output, tests, CI, and the NuGet package. v0.2
-added Redis, SQL Server, SARIF, and per-project configuration. v0.3 added `fix` and a first
+added Redis, SQL Server, SARIF, and per-project configuration. v0.3 added `fix`, `update`, a first
 Performance category (`PERF001`-`PERF003`), plus made rule detection smarter where it mattered
-most: `ARCH001` now checks that a persistence package is actually *used* in `Api`'s own code, not
-just referenced, and every text-based rule ignores matches inside comments. Still ahead, in rough
-order of what's next:
+most: `ARCH001`, `SEC001`, `REL001`, `OBS001`, and `OBS002` all now verify a feature is actually
+*wired up* (middleware added, endpoint mapped, package used), not just referenced or mentioned, and
+every text-based rule ignores matches inside comments. That rounds out the
+`new`/`add`/`doctor`/`fix`/`update` set v1.0 is built on. Still ahead, in rough order of what's next:
 
-- **`aspireforge update`** to pull in newer versions of AspireForge-generated scaffolding (Docker
-  assets, CI workflow, etc.) into an existing project.
 - **`rules install <pack>`** - third-party rule packages built on the same `IAnalysisRule`
   contract as the built-in rules.
 - **A distributable GitHub Action** wrapping `aspireforge doctor`, so other repos can run it in CI
