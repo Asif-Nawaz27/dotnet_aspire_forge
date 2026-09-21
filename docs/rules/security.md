@@ -5,7 +5,11 @@
 **Default severity:** `warning`
 
 Fires when the project looks like an ASP.NET Core web app (its source contains
-`WebApplication.CreateBuilder`) but no call to `AddAuthentication` was found.
+`WebApplication.CreateBuilder`) and either of two things is missing:
+
+- No call to `AddAuthentication` - no scheme was ever registered, or
+- `AddAuthentication` is present but no call to `app.UseAuthentication()` was found - a scheme is
+  registered but the middleware never runs, so requests are never actually authenticated.
 
 **Fix:** `aspireforge add authentication` (see [`add`](../commands/add.md)).
 

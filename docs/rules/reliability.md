@@ -4,11 +4,15 @@
 
 **Default severity:** `warning`
 
-Fires when the project is a web app but no call to `AddHealthChecks` was found. Without a health
-endpoint, orchestrators and load balancers can't verify the service's readiness or liveness.
+Fires when the project is a web app and either of two things is missing:
 
-**Fix:** `aspireforge add telemetry` wires up health checks as part of `ServiceDefaults` (see
-[telemetry](../features/telemetry.md)), or call `builder.Services.AddHealthChecks()` directly.
+- No call to `AddHealthChecks` - health checks were never registered at all, or
+- `AddHealthChecks` is present but no call to `MapHealthChecks` was found - health checks are
+  registered in DI but never exposed as an endpoint, so nothing can actually query them.
+
+**Fix:** `aspireforge add telemetry` wires up both as part of `ServiceDefaults` (see
+[telemetry](../features/telemetry.md)), or call `builder.Services.AddHealthChecks()` and
+`app.MapHealthChecks("/health")` directly.
 
 ## REL002 - Global exception handling missing
 

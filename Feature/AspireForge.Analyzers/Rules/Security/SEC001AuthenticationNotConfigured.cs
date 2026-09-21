@@ -19,16 +19,29 @@ public sealed class SEC001AuthenticationNotConfigured : IAnalysisRule
             return null;
         }
 
-        if (await SourceFileHeuristics.ContainsAnyAsync(context, cancellationToken, "AddAuthentication"))
+        if (!await SourceFileHeuristics.ContainsAnyAsync(context, cancellationToken, "AddAuthentication"))
         {
-            return null;
+            return new AnalysisIssue(
+                Id,
+                Title,
+                "No call to AddAuthentication was found. If this API requires callers to be identified, register an authentication scheme.",
+                DefaultSeverity,
+                context.ProjectFile);
         }
 
-        return new AnalysisIssue(
-            Id,
-            Title,
-            "No call to AddAuthentication was found. If this API requires callers to be identified, register an authentication scheme.",
-            DefaultSeverity,
-            context.ProjectFile);
+        // A registered scheme does nothing unless the middleware is actually added to the pipeline -
+        // a real, easy mistake (register the service, forget app.UseAuthentication()), not just a
+        // hypothetical one this rule should catch.
+        if (!await SourceFileHeuristics.ContainsAnyAsync(context, cancellationToken, "UseAuthentication"))
+        {
+            return new AnalysisIssue(
+                Id,
+                Title,
+                "AddAuthentication was found, but app.UseAuthentication() was not. The scheme is registered but the middleware never runs, so requests are never actually authenticated.",
+                DefaultSeverity,
+                context.ProjectFile);
+        }
+
+        return null;
     }
 }
