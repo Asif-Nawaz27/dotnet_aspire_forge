@@ -62,9 +62,14 @@ Rather than a bespoke templating engine, the generator composes the .NET SDK's o
 
 Adding a capability to a generated project (`aspireforge add ...`) is implemented as an
 `IFeatureInstaller`: a small, independent class that takes a `FeatureContext` (project name + root
-path) and returns the list of steps it performed. `new` and `add` share this same abstraction -
-`new` runs a fixed set of installers (README, `.gitignore`, Docker, CI) after generation, and `add`
-runs one installer chosen by name. See [Features](../features/postgres.md) for what each one does.
+path) and returns the list of steps it performed. `new`, `add`, and `update` all share this same
+abstraction - `new` runs a fixed set of installers (README, `.gitignore`, Docker, CI) after
+generation, `add` runs one installer chosen by name, and `update` (see
+[`update`](../commands/update.md)) re-runs the subset of `new`'s installers that are safe to replay
+unattended (`.gitignore`, Docker, CI - deliberately not README, which tends to become
+project-specific over time). `UpdateFeatureSet` (in `Generators`) is that subset's registry, the
+same shape as `RuleFixSet` below. See [Features](../features/postgres.md) for what each installer
+does.
 
 ## Fixes
 
@@ -91,7 +96,7 @@ Every command shares one exit-code scheme:
 | `0` | Successful. |
 | `1` | `doctor` found an issue at or above `--fail-on`. |
 | `2` | Invalid command or configuration (bad arguments, missing solution file, unrecognized command). |
-| `3` | Generation, feature-install, or fix failure. |
+| `3` | Generation, feature-install, fix, or update failure. |
 
 ## NuGet package strategy
 

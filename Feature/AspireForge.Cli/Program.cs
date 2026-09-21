@@ -13,6 +13,7 @@ root.Subcommands.Add(BuildNewCommand());
 root.Subcommands.Add(BuildAddCommand());
 root.Subcommands.Add(BuildDoctorCommand());
 root.Subcommands.Add(BuildFixCommand());
+root.Subcommands.Add(BuildUpdateCommand());
 root.Subcommands.Add(BuildRulesCommand());
 root.Subcommands.Add(BuildVersionCommand());
 root.Subcommands.Add(BuildHelpCommand(root));
@@ -108,6 +109,15 @@ static Command BuildFixCommand()
 
     command.SetAction(parseResult =>
         new FixCommand(new ConsoleRenderer()).RunAsync(parseResult.GetValue(ruleIdArgument)!));
+
+    return command;
+}
+
+static Command BuildUpdateCommand()
+{
+    var command = new Command("update", "Refresh AspireForge-generated scaffolding (Docker, CI, .gitignore) in the current project.");
+
+    command.SetAction(_ => new UpdateCommand(new ConsoleRenderer()).RunAsync());
 
     return command;
 }
