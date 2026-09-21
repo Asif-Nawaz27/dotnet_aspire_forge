@@ -18,12 +18,24 @@ public class OBS001Tests
     }
 
     [Fact]
-    public async Task DoesNotFire_WhenAddOpenTelemetryIsCalled()
+    public async Task DoesNotFire_WhenAddOpenTelemetryHasASignalWiredToIt()
+    {
+        using var project = TestProject.Create(
+            "builder.Services.AddOpenTelemetry().WithTracing(tracing => tracing.AddSource(\"App\"));");
+
+        var issue = await _rule.EvaluateAsync(project.Context);
+
+        Assert.Null(issue);
+    }
+
+    [Fact]
+    public async Task Fires_WhenAddOpenTelemetryHasNoSignalWiredToIt()
     {
         using var project = TestProject.Create("builder.Services.AddOpenTelemetry();");
 
         var issue = await _rule.EvaluateAsync(project.Context);
 
-        Assert.Null(issue);
+        Assert.NotNull(issue);
+        Assert.Contains("WithTracing", issue!.Description);
     }
 }
