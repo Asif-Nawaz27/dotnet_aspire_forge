@@ -19,16 +19,28 @@ public sealed class REL001HealthChecksMissing : IAnalysisRule
             return null;
         }
 
-        if (await SourceFileHeuristics.ContainsAnyAsync(context, cancellationToken, "AddHealthChecks"))
+        if (!await SourceFileHeuristics.ContainsAnyAsync(context, cancellationToken, "AddHealthChecks"))
         {
-            return null;
+            return new AnalysisIssue(
+                Id,
+                Title,
+                "No call to AddHealthChecks was found. Orchestrators and load balancers cannot verify this service's readiness or liveness.",
+                DefaultSeverity,
+                context.ProjectFile);
         }
 
-        return new AnalysisIssue(
-            Id,
-            Title,
-            "No call to AddHealthChecks was found. Orchestrators and load balancers cannot verify this service's readiness or liveness.",
-            DefaultSeverity,
-            context.ProjectFile);
+        // Registering health checks without mapping an endpoint for them leaves nothing for an
+        // orchestrator to actually call - the exact failure mode this rule exists to catch.
+        if (!await SourceFileHeuristics.ContainsAnyAsync(context, cancellationToken, "MapHealthChecks"))
+        {
+            return new AnalysisIssue(
+                Id,
+                Title,
+                "AddHealthChecks was found, but no call to MapHealthChecks was. Health checks are registered but not exposed as an endpoint, so nothing can actually query them.",
+                DefaultSeverity,
+                context.ProjectFile);
+        }
+
+        return null;
     }
 }
