@@ -23,12 +23,12 @@ internal static class GitHubWorkflows
                   dotnet-version: '10.0.x'
 
               - name: Restore
-                run: dotnet restore {projectName}.sln
+                run: dotnet restore {projectName}.slnx
 
               - name: Build
-                run: dotnet build {projectName}.sln --no-restore --configuration Release
+                run: dotnet build {projectName}.slnx --no-restore --configuration Release
 
               - name: Test
-                run: dotnet test {projectName}.sln --no-build --configuration Release
+                run: dotnet test {projectName}.slnx --no-build --configuration Release
         """;
 }
