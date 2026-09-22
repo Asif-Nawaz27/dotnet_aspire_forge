@@ -1,4 +1,4 @@
-using System.Xml.Linq;
+using System.Text.Json;
 using AspireForge.Core.Features;
 using AspireForge.Generators.Project;
 
@@ -86,18 +86,48 @@ public sealed class EfCoreDatabaseFeatureInstaller(DatabaseProvider provider) : 
 
     private static void PinConsistentEfCoreVersion(FeatureContext context, string infrastructureCsproj, string apiCsproj)
     {
-        var version = ReadPackageVersion(infrastructureCsproj, "Microsoft.EntityFrameworkCore.Design")
-            ?? throw new InvalidOperationException("Could not determine the resolved EF Core version.");
+        var version = ReadResolvedPackageVersion(infrastructureCsproj, "Microsoft.EntityFrameworkCore.Design");
 
         DotnetCli.Run(["add", infrastructureCsproj, "package", "Microsoft.EntityFrameworkCore", "--version", version], context.RootPath);
         DotnetCli.Run(["add", apiCsproj, "package", "Microsoft.EntityFrameworkCore", "--version", version], context.RootPath);
     }
 
-    private static string? ReadPackageVersion(string csprojPath, string packageName) =>
-        XDocument.Load(csprojPath)
-            .Descendants("PackageReference")
-            .FirstOrDefault(element => element.Attribute("Include")?.Value == packageName)
-            ?.Attribute("Version")?.Value;
+    // Reads the version NuGet actually resolved, from project.assets.json rather than the raw
+    // PackageReference XML. The XML's Version attribute only exists when the project sets its own
+    // version - under central package management (a Directory.Packages.props reachable from this
+    // project, common in monorepos) `dotnet add package` omits it entirely, since the version lives
+    // in Directory.Packages.props instead. project.assets.json's "libraries" section, by contrast,
+    // always lists the fully-resolved version post-restore ("PackageId/Version" keys) regardless of
+    // where that version was declared, so this works the same way with or without CPM.
+    private static string ReadResolvedPackageVersion(string csprojPath, string packageName)
+    {
+        var assetsPath = Path.Combine(Path.GetDirectoryName(csprojPath)!, "obj", "project.assets.json");
+
+        if (!File.Exists(assetsPath))
+        {
+            throw new InvalidOperationException(
+                $"Could not determine the resolved EF Core version: '{assetsPath}' does not exist. Expected the project to have been restored by the preceding `dotnet add package`.");
+        }
+
+        using var document = JsonDocument.Parse(File.ReadAllText(assetsPath));
+
+        if (document.RootElement.TryGetProperty("libraries", out var libraries))
+        {
+            foreach (var library in libraries.EnumerateObject())
+            {
+                var separator = library.Name.LastIndexOf('/');
+
+                if (separator > 0
+                    && string.Equals(library.Name[..separator], packageName, StringComparison.OrdinalIgnoreCase))
+                {
+                    return library.Name[(separator + 1)..];
+                }
+            }
+        }
+
+        throw new InvalidOperationException(
+            $"Could not determine the resolved version of '{packageName}' from '{assetsPath}'.");
+    }
 
     private static void InstallMigrationsTooling(string root)
     {
