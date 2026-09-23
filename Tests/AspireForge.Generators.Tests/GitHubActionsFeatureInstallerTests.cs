@@ -26,6 +26,67 @@ public class GitHubActionsFeatureInstallerTests : IDisposable
         Assert.Contains(Path.GetFileName(solutionFile), workflowContent);
     }
 
+    [Fact]
+    public async Task InstallAsync_WritesTheWorkflowFileToTheConventionalGitHubActionsPath()
+    {
+        var context = Generate("SampleApi");
+
+        await new GitHubActionsFeatureInstaller().InstallAsync(context);
+
+        Assert.True(File.Exists(Path.Combine(context.RootPath, ".github", "workflows", "ci.yml")));
+    }
+
+    [Fact]
+    public async Task InstallAsync_TheWorkflowRestoresBuildsAndTestsTheSolution()
+    {
+        var context = Generate("SampleApi");
+
+        await new GitHubActionsFeatureInstaller().InstallAsync(context);
+
+        var solutionFileName = Path.GetFileName(
+            Directory.EnumerateFiles(context.RootPath, "*.sln*", SearchOption.TopDirectoryOnly).Single());
+        var content = await File.ReadAllTextAsync(Path.Combine(context.RootPath, ".github", "workflows", "ci.yml"));
+
+        Assert.Contains($"dotnet restore {solutionFileName}", content);
+        Assert.Contains($"dotnet build {solutionFileName}", content);
+        Assert.Contains($"dotnet test {solutionFileName}", content);
+    }
+
+    [Fact]
+    public async Task InstallAsync_TheWorkflowTriggersOnPushAndPullRequestToMain()
+    {
+        var context = Generate("SampleApi");
+
+        await new GitHubActionsFeatureInstaller().InstallAsync(context);
+
+        var content = await File.ReadAllTextAsync(Path.Combine(context.RootPath, ".github", "workflows", "ci.yml"));
+
+        Assert.Contains("push:", content);
+        Assert.Contains("pull_request:", content);
+        Assert.Contains("branches: [ main ]", content);
+    }
+
+    [Fact]
+    public async Task InstallAsync_IsIdempotent_SoUpdateCanSafelyReRunIt()
+    {
+        var context = Generate("SampleApi");
+        var installer = new GitHubActionsFeatureInstaller();
+
+        await installer.InstallAsync(context);
+        var steps = await installer.InstallAsync(context);
+
+        Assert.Single(steps);
+        Assert.True(File.Exists(Path.Combine(context.RootPath, ".github", "workflows", "ci.yml")));
+    }
+
+    [Fact]
+    public void Feature_IsRegisteredUnderTheExpectedId()
+    {
+        var installer = new GitHubActionsFeatureInstaller();
+
+        Assert.Equal("github-actions", installer.Feature.Id);
+    }
+
     private FeatureContext Generate(string projectName)
     {
         var generator = new CleanArchitectureGenerator();
