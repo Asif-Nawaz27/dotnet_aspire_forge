@@ -15,10 +15,10 @@ public sealed class GitHubUserService(HttpClient httpClient) : IGitHubUserServic
         var followers = await GetAllPagesAsync(username, "followers", cancellationToken);
         var following = await GetAllPagesAsync(username, "following", cancellationToken);
 
-        var followingLogins = following.Select(user => user.Login).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var followerLogins = followers.Select(user => user.Login).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        return followers
-            .Where(follower => !followingLogins.Contains(follower.Login))
+        return following
+            .Where(follower => !followerLogins.Contains(follower.Login))
             .Select(follower => new GitHubUser(follower.Id, follower.Login, follower.AvatarUrl, follower.HtmlUrl))
             .ToList();
     }
