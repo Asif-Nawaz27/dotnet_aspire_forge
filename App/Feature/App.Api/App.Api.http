@@ -1,6 +1,20 @@
 @App.Api_HostAddress = http://localhost:5107
+@username = octocat
 
-GET {{App.Api_HostAddress}}/weatherforecast/
+### Accounts the user follows that don't follow it back
+GET {{App.Api_HostAddress}}/api/github/{{username}}/followers-not-following-back
 Accept: application/json
 
-###
+### Both directions of the follow relationship, with totals
+GET {{App.Api_HostAddress}}/api/github/{{username}}/relationship
+Accept: application/json
+
+### Recorded snapshots, newest first
+GET {{App.Api_HostAddress}}/api/github/{{username}}/history?limit=10
+Accept: application/json
+
+### Readiness (includes the database)
+GET {{App.Api_HostAddress}}/health
+
+### Liveness
+GET {{App.Api_HostAddress}}/alive

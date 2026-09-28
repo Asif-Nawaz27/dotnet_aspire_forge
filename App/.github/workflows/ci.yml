@@ -17,11 +17,14 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      - name: Restore
-        run: dotnet restore App.sln
-
       - name: Build
-        run: dotnet build App.sln --no-restore --configuration Release
+        run: dotnet build Feature/App.Api --configuration Release
 
-      - name: Test
-        run: dotnet test App.sln --no-build --configuration Release
+      - name: Unit tests
+        run: dotnet test Tests/App.UnitTests --configuration Release
+
+      - name: Integration tests
+        run: dotnet test Tests/App.Api.IntegrationTests --configuration Release
+
+      - name: Docker image
+        run: docker build -t app-api .

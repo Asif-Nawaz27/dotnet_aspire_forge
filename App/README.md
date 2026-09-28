@@ -11,14 +11,57 @@ aspireforge add telemetry
 aspireforge add authentication
 ```
 
+It was then built out by hand into a small production-shaped service: a GitHub follow-relationship
+API with caching, persistence, resilience, and a full test suite. It shows what `aspireforge doctor`
+reports at each stage (see [Before / after](#before--after)).
+
+## What it does
+
+| Endpoint | Description |
+| --- | --- |
+| `GET /api/github/{username}/followers-not-following-back` | Accounts the user follows that don't follow it back. |
+| `GET /api/github/{username}/relationship` | Both directions (not following back / not followed back) plus totals. |
+| `GET /api/github/{username}/history?limit=20` | Previously recorded snapshots of those counts, newest first. |
+| `GET /health`, `GET /alive` | Readiness (includes Postgres) and liveness probes. |
+| `GET /secure` | Requires a JWT bearer token. |
+
+All errors are [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) problem details with a `traceId`.
+Examples: 400 for an invalid username, 404 for an unknown user, 429 when the client's rate limit is
+spent, 502/503 (+ `Retry-After`) when GitHub fails or rate-limits us.
+
 ## Layout
 
-- `Feature/App.Domain` - entities and business rules with no outward dependencies.
-- `Feature/App.Application` - use cases and abstractions, depends only on Domain.
-- `Feature/App.Infrastructure` - implementations of Application abstractions (persistence, external services).
-- `Feature/App.ServiceDefaults` - OpenTelemetry metrics, traces, logs, and health checks (added by `add telemetry`).
-- `Feature/App.Api` - the ASP.NET Core host and composition root.
-- `Tests/App.IntegrationTests` - end-to-end tests against the Api.
+- `Feature/App.Domain` - entities (`FollowSnapshot`), value logic (`FollowRelationshipReport`,
+  `GitHubUsername`) and domain exceptions. No outward dependencies.
+- `Feature/App.Application` - use cases (`GitHubUserService`) and the ports they depend on
+  (`IGitHubClient`, `IFollowSnapshotRepository`, `IFollowSnapshotQueue`). Registered via `AddApplication()`.
+- `Feature/App.Infrastructure` - adapters for those ports: the typed GitHub HTTP client, EF Core
+  persistence and migrations, and the background snapshot writer. Registered via `AddInfrastructure()`.
+- `Feature/App.ServiceDefaults` - OpenTelemetry, health checks, and HttpClient resilience.
+- `Feature/App.Api` - the ASP.NET Core host and composition root: controllers, error handling,
+  auth, CORS, rate limiting, compression. Has no EF Core dependency of its own.
+- `Tests/App.UnitTests` - Domain, Application and the GitHub client, with no host or network.
+- `Tests/App.Api.IntegrationTests` - the full HTTP pipeline via `WebApplicationFactory`, with GitHub
+  faked and Postgres swapped for EF Core's in-memory provider.
+
+## Production concerns and how they're handled
+
+- **GitHub quota.** Unauthenticated, GitHub allows 60 requests/hour per IP.
+  - Reports are cached (`HybridCache`, 10 minutes by default).
+  - A profile request up front refuses oversized accounts (`GitHubReports:MaxRelationshipSize`)
+    before any paging.
+  - Quota-spending endpoints get a tighter per-client rate limit.
+  - Set `GitHub__Token` to raise GitHub's limit to 5,000/hour.
+- **Slow or failing dependencies.**
+  - Every `HttpClient` gets the standard resilience pipeline (retries, circuit breaker, timeouts).
+  - EF Core retries transient Postgres errors a bounded number of times.
+  - Snapshot history is written by a background service from a bounded queue, so a database
+    outage never slows or fails a lookup.
+- **Configuration.** Options are validated at startup. Outside Development, the API refuses to start
+  without a connection string and a real JWT signing key (the checked-in placeholder is rejected).
+- **Security.** HTTPS redirection and HSTS, a CORS allow-list (`Cors:AllowedOrigins`), and
+  usernames validated against GitHub's own rules before they reach a URL. The container runs as a
+  non-root user.
 
 ## Getting started
 
@@ -27,9 +70,29 @@ solution, so build/test by project path:
 
 ```bash
 dotnet build Feature/App.Api
-dotnet test Tests/App.IntegrationTests
+dotnet test Tests/App.UnitTests
+dotnet test Tests/App.Api.IntegrationTests
 dotnet run --project Feature/App.Api
 ```
+
+In Development the API connects to Postgres on `localhost:5432` and applies migrations on startup.
+Without a database the GitHub endpoints still work; only `/history` and `/health` are affected.
+
+To run the whole stack in containers:
+
+```bash
+JWT_SIGNING_KEY=<32+ random characters> docker compose up --build
+```
+
+### Migrations
+
+```bash
+dotnet tool restore
+dotnet ef migrations add <Name> --project Feature/App.Infrastructure --output-dir Persistence/Migrations
+```
+
+Migrations apply on startup only when `Database:MigrateOnStartup` is true. That's the default in
+Development and docker-compose. With several replicas, run them as a separate release step instead.
 
 ## Before / after
 
@@ -64,8 +127,13 @@ Performance
 Production Readiness: 4/10
 ```
 
-This project - the same starting scaffold, then `add postgres`/`add telemetry`/`add
-authentication` - reports **6/10**:
+After `add postgres`/`add telemetry`/`add authentication` it reports **6/10**. Global exception
+handling, a test project matching the Api, response compression, and rate limiting have no automatic
+fix yet (see [`fix`](../docs/commands/fix.md#fixable-rules-today)). The architecture check also flagged
+the Api's direct EF Core usage, a known trade-off of today's `add postgres` (see
+[architecture rules](../docs/rules/architecture.md)).
+
+This project, with that remaining work done by hand, reports **10/10**:
 
 ```
 Security
@@ -75,33 +143,28 @@ Security
 
 Reliability
   ✓ Health checks configured
-  ⚠ Global exception handling missing
+  ✓ Global exception handling
 
 Observability
   ✓ OpenTelemetry configured
   ✓ Structured logging
 
 Testing
-  ⚠ No test project detected
+  ✓ Unit tests detected
   ✓ Integration tests detected
 
 Architecture
-  ⚠ API directly accesses persistence layer
+  ✓ No obvious dependency violations
 
 Performance
-  ⚠ Response compression missing
-  ⚠ Rate limiting missing
+  ✓ Response compression configured
+  ✓ Rate limiting configured
   ✓ No blocking calls on async code
 
-Production Readiness: 6/10
+Production Readiness: 10/10
 ```
 
-Run `aspireforge doctor Feature/App.Api` yourself to reproduce this. The five remaining warnings are
-intentional, not a sample bug: global exception handling, a dedicated unit test project, response
-compression, and rate limiting have no automatic fix yet (see
-[`fix`](../docs/commands/fix.md#fixable-rules-today)), and the architecture check flags the Api
-project's direct EF Core reference - a real, known trade-off of today's `add postgres` (see
-[architecture rules](../docs/rules/architecture.md) for why that one specifically still fires here).
+Run `aspireforge doctor Feature/App.Api` yourself to reproduce this.
 
 ## Note on `Directory.Packages.props`
 
