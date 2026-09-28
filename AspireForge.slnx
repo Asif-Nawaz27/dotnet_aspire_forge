@@ -18,6 +18,7 @@
     <Project Path="App/Feature/App.Infrastructure/App.Infrastructure.csproj" />
     <Project Path="App/Feature/App.ServiceDefaults/App.ServiceDefaults.csproj" />
     <Project Path="App/Feature/App.Api/App.Api.csproj" />
-    <Project Path="App/Tests/App.IntegrationTests/App.IntegrationTests.csproj" />
+    <Project Path="App/Tests/App.Api.IntegrationTests/App.Api.IntegrationTests.csproj" />
+    <Project Path="App/Tests/App.UnitTests/App.UnitTests.csproj" />
   </Folder>
 </Solution>
