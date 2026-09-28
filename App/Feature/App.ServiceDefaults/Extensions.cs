@@ -14,11 +14,18 @@ namespace App.ServiceDefaults;
 
 public static class Extensions
 {
+    private const string HealthEndpointPath = "/health";
+    private const string AlivenessEndpointPath = "/alive";
+
     public static TBuilder AddServiceDefaults<TBuilder>(this TBuilder builder)
         where TBuilder : IHostApplicationBuilder
     {
         builder.ConfigureOpenTelemetry();
         builder.AddDefaultHealthChecks();
+
+        // Every HttpClient gets retries with jittered backoff, a circuit breaker, and per-attempt and
+        // total timeouts, so a slow or flapping dependency can't tie up request threads indefinitely.
+        builder.Services.ConfigureHttpClientDefaults(http => http.AddStandardResilienceHandler());
 
         return builder;
     }
@@ -39,7 +46,12 @@ public static class Extensions
                 .AddHttpClientInstrumentation()
                 .AddRuntimeInstrumentation())
             .WithTracing(tracing => tracing
-                .AddAspNetCoreInstrumentation()
+                .AddSource(builder.Environment.ApplicationName)
+                .AddAspNetCoreInstrumentation(options =>
+                    // Health probes run every few seconds and would drown out real traffic in traces.
+                    options.Filter = context =>
+                        !context.Request.Path.StartsWithSegments(HealthEndpointPath)
+                        && !context.Request.Path.StartsWithSegments(AlivenessEndpointPath))
                 .AddHttpClientInstrumentation());
 
         var otlpEndpoint = builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"];
@@ -63,9 +75,11 @@ public static class Extensions
 
     public static WebApplication MapDefaultEndpoints(this WebApplication app)
     {
-        app.MapHealthChecks("/health");
+        // Readiness: every registered check, including dependencies such as the database.
+        app.MapHealthChecks(HealthEndpointPath);
 
-        app.MapHealthChecks("/alive", new HealthCheckOptions
+        // Liveness: only the process itself, so a dependency outage doesn't get the container restarted.
+        app.MapHealthChecks(AlivenessEndpointPath, new HealthCheckOptions
         {
             Predicate = check => check.Tags.Contains("live"),
         });
