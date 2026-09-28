@@ -39,6 +39,11 @@ jobs:
           dotnet test Tests/AspireForge.Generators.Tests --no-restore --no-build --configuration Release
           dotnet test Tests/AspireForge.IntegrationTests --no-restore --no-build --configuration Release
 
+      - name: Sample app tests
+        run: |
+          dotnet test App/Tests/App.UnitTests --no-restore --no-build --configuration Release
+          dotnet test App/Tests/App.Api.IntegrationTests --no-restore --no-build --configuration Release
+
       - name: Pack
         run: dotnet pack Feature/AspireForge.Cli --no-restore --no-build --configuration Release --output ./artifacts
 
