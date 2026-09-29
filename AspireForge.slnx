@@ -18,11 +18,7 @@
     <Project Path="App/Feature/App.Infrastructure/App.Infrastructure.csproj" />
     <Project Path="App/Feature/App.ServiceDefaults/App.ServiceDefaults.csproj" />
     <Project Path="App/Feature/App.Api/App.Api.csproj" />
-    <Project Path="App/Tests/App.Api.IntegrationTests/App.Api.IntegrationTests.csproj">
-      <Build Solution="Debug|*" Project="false" />
-    </Project>
-    <Project Path="App/Tests/App.UnitTests/App.UnitTests.csproj">
-      <Build Solution="Debug|*" Project="false" />
-    </Project>
+    <Project Path="App/Tests/App.Api.IntegrationTests/App.Api.IntegrationTests.csproj" />
+    <Project Path="App/Tests/App.UnitTests/App.UnitTests.csproj" />
   </Folder>
 </Solution>

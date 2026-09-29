@@ -23,6 +23,11 @@ public sealed class AppApiFactory : WebApplicationFactory<Program>
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        // Every setting the host requires is supplied here, so the tests don't depend on the
+        // appsettings*.json files (which are not committed) and run identically locally and in CI.
+        builder.UseSetting("Jwt:Issuer", "App.Tests");
+        builder.UseSetting("Jwt:Audience", "App.Tests");
+        builder.UseSetting("Jwt:SigningKey", "integration-tests-signing-key-at-least-32-chars");
         builder.UseSetting("ConnectionStrings:Postgres", "Host=unused");
         builder.UseSetting("Database:MigrateOnStartup", "false");
         builder.UseSetting("RateLimiting:GlobalPermitLimit", "1000");
