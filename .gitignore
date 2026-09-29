@@ -9,3 +9,5 @@
 /artifacts
 
 
+/App/Feature/App.Api/appsettings.json
+/App/Feature/App.Api/appsettings.Development.json
