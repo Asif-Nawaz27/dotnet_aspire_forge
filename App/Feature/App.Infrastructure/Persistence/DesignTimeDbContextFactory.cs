@@ -12,7 +12,7 @@ internal sealed class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<A
     public AppDbContext CreateDbContext(string[] args)
     {
         var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__Postgres")
-            ?? "Host=localhost;Database=App;Username=postgres;Password=postgres";
+            ?? string.Empty;
 
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseNpgsql(connectionString)
