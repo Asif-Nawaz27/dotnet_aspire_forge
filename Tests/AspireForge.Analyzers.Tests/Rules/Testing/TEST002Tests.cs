@@ -18,6 +18,17 @@ public class TEST002Tests
     }
 
     [Fact]
+    public async Task Fires_WhenTheTestsFolderIsCapitalised()
+    {
+        using var solution = SolutionLayout.Create("MyApi", testProjectNames: ["MyApi.Tests"], "Tests");
+
+        var issue = await _rule.EvaluateAsync(solution.ApiContext);
+
+        Assert.NotNull(issue);
+        Assert.Contains(Path.DirectorySeparatorChar + "Tests'", issue!.Description, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task DoesNotFire_WhenAnIntegrationTestProjectExists()
     {
         using var solution = SolutionLayout.Create("MyApi", testProjectNames: ["MyApi.IntegrationTests"]);

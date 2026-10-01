@@ -5,7 +5,8 @@
 **Default severity:** `warning`
 
 Skipped for projects whose own name contains "Test". Otherwise, AspireForge walks upward from the
-project directory looking for a `tests/` folder (matching the layout `aspireforge new` generates),
+project directory looking for a `tests/` folder (matching the layout `aspireforge new` generates;
+the name is matched case-insensitively, so `Tests/` works on Linux and macOS too),
 and fires if no directory under it both contains the project's name and contains "Test". If no
 `tests/` folder is found at all, the rule can't determine the repository layout and stays silent
 rather than report a false positive.
