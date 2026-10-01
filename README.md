@@ -133,6 +133,11 @@ Full command reference: [`new`](docs/commands/new.md) · [`add`](docs/commands/a
 | SEC004 | Security | No literal secrets in `appsettings*.json` | error |
 | REL001 | Reliability | Health checks configured | warning |
 | REL002 | Reliability | Global exception handling configured | warning |
+| REL003 | Reliability | Outbound HTTP has resilience; no `new HttpClient(` | warning |
+| REL004 | Reliability | Health checks cover database/Redis dependencies | warning |
+| REL005 | Reliability | No `EnsureCreated()` in app code | warning |
+| REL006 | Reliability | Database retry policy (`EnableRetryOnFailure`) configured | suggestion |
+| REL007 | Reliability | Settings validated at startup (`ValidateOnStart`) | warning |
 | OBS001 | Observability | OpenTelemetry configured | info |
 | OBS002 | Observability | Structured logging configured | info |
 | TEST001 | Testing | A matching unit test project exists | warning |

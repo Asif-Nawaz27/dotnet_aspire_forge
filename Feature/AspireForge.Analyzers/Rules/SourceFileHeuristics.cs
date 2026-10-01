@@ -32,6 +32,31 @@ internal static class SourceFileHeuristics
         return false;
     }
 
+    // Regex counterpart of ContainsAnyAsync for rules that need more than a substring (e.g. the
+    // difference between AddRedis( the health check and AddRedisDistributedCache( the cache).
+    // Comments are stripped first, same as everywhere else.
+    public static async Task<int> CountMatchesAsync(
+        ProjectContext context,
+        CancellationToken cancellationToken,
+        Regex pattern)
+    {
+        var count = 0;
+
+        foreach (var file in context.SourceFiles)
+        {
+            var content = StripComments(await File.ReadAllTextAsync(file, cancellationToken));
+            count += pattern.Count(content);
+        }
+
+        return count;
+    }
+
+    public static async Task<bool> MatchesAsync(
+        ProjectContext context,
+        CancellationToken cancellationToken,
+        Regex pattern) =>
+        await CountMatchesAsync(context, cancellationToken, pattern) > 0;
+
     // Source files belonging to this project itself, excluding the referenced projects' files that
     // SourceFiles also carries (see ProjectContextBuilder) - for rules like ARCH001 that care whether
     // THIS project's own code uses something, not whether it's merely reachable through a reference.
