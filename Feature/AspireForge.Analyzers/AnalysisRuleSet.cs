@@ -16,6 +16,7 @@ public static class AnalysisRuleSet
         new SEC001AuthenticationNotConfigured(),
         new SEC002CorsPolicyAllowsUnrestrictedOrigins(),
         new SEC003HttpsRedirectionMissing(),
+        new SEC004SecretsInConfiguration(),
         new REL001HealthChecksMissing(),
         new REL002GlobalExceptionHandlingMissing(),
         new OBS001OpenTelemetryMissing(),

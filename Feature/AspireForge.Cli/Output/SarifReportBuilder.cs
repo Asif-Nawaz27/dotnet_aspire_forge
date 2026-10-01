@@ -21,7 +21,7 @@ public static class SarifReportBuilder
                 issue.RuleId,
                 ToSarifLevel(issue.Severity),
                 new SarifMessage(issue.Description),
-                BuildLocations(issue.FilePath)))
+                BuildLocations(issue.FilePath, issue.LineNumber)))
             .ToList();
 
         var driver = new SarifToolDriver("AspireForge", toolVersion, ruleDescriptors);
@@ -30,7 +30,7 @@ public static class SarifReportBuilder
         return new SarifLog(SchemaUri, "2.1.0", [run]);
     }
 
-    private static IReadOnlyList<SarifLocation> BuildLocations(string? filePath)
+    private static IReadOnlyList<SarifLocation> BuildLocations(string? filePath, int? lineNumber)
     {
         if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
         {
@@ -38,8 +38,12 @@ public static class SarifReportBuilder
         }
 
         var relativePath = Path.GetRelativePath(Directory.GetCurrentDirectory(), filePath).Replace('\\', '/');
-        var lineCount = Math.Max(1, File.ReadAllLines(filePath).Length);
-        var region = new SarifRegion(1, lineCount);
+
+        // Point at the exact line when the rule knows it (so code scanning annotates that line);
+        // otherwise the finding is about the file as a whole.
+        var region = lineNumber is > 0
+            ? new SarifRegion(lineNumber.Value, lineNumber.Value)
+            : new SarifRegion(1, Math.Max(1, File.ReadAllLines(filePath).Length));
 
         return [new SarifLocation(new SarifPhysicalLocation(new SarifArtifactLocation(relativePath), region))];
     }
