@@ -28,6 +28,35 @@ public class TEST001Tests
         Assert.Null(issue);
     }
 
+    // "Tests/" (capitalised, as in this repository) must be found on case-sensitive file systems too,
+    // and reported with its real casing - asserting the exact path makes this fail on Windows as well
+    // if the lookup regresses to a hard-coded lowercase "tests".
+    [Theory]
+    [InlineData("Tests")]
+    [InlineData("TESTS")]
+    public async Task Fires_WhenTheTestsFolderUsesDifferentCasing(string testsDirectoryName)
+    {
+        using var solution = SolutionLayout.Create("MyApi", testProjectNames: [], testsDirectoryName);
+
+        var issue = await _rule.EvaluateAsync(solution.ApiContext);
+
+        Assert.NotNull(issue);
+        Assert.Contains(
+            Path.DirectorySeparatorChar + testsDirectoryName + "'",
+            issue!.Description,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task DoesNotFire_WhenAMatchingTestProjectExistsUnderACapitalisedTestsFolder()
+    {
+        using var solution = SolutionLayout.Create("MyApi", testProjectNames: ["MyApi.Api.Tests"], "Tests");
+
+        var issue = await _rule.EvaluateAsync(solution.ApiContext);
+
+        Assert.Null(issue);
+    }
+
     [Fact]
     public async Task DoesNotFire_ForATestProjectItself()
     {
@@ -61,13 +90,14 @@ internal sealed class SolutionLayout : IDisposable
 
     public ProjectContext ApiContext { get; }
 
-    public static SolutionLayout Create(string projectName, IReadOnlyList<string> testProjectNames)
+    public static SolutionLayout Create(
+        string projectName, IReadOnlyList<string> testProjectNames, string testsDirectoryName = "tests")
     {
         var root = Path.Combine(Path.GetTempPath(), "aspireforge-tests", Guid.NewGuid().ToString("N"));
         var apiDirectory = Path.Combine(root, "src", $"{projectName}.Api");
         Directory.CreateDirectory(apiDirectory);
 
-        var testsDirectory = Path.Combine(root, "tests");
+        var testsDirectory = Path.Combine(root, testsDirectoryName);
         Directory.CreateDirectory(testsDirectory);
 
         foreach (var testProjectName in testProjectNames)
