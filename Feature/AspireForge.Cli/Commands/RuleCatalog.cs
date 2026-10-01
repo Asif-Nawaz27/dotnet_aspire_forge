@@ -9,6 +9,7 @@ public static class RuleCatalog
         new("Security", "SEC001", "Authentication", "Authentication configured"),
         new("Security", "SEC002", "CORS", "CORS policy restricts origins"),
         new("Security", "SEC003", "HTTPS", "HTTPS configured"),
+        new("Security", "SEC004", "Secrets in config", "No secrets in configuration files"),
         new("Reliability", "REL001", "Health checks", "Health checks configured"),
         new("Reliability", "REL002", "Exception handling", "Global exception handling"),
         new("Observability", "OBS001", "OpenTelemetry", "OpenTelemetry configured"),
