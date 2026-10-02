@@ -140,6 +140,7 @@ Full command reference: [`new`](docs/commands/new.md) · [`add`](docs/commands/a
 | REL007 | Reliability | Settings validated at startup (`ValidateOnStart`) | warning |
 | OBS001 | Observability | OpenTelemetry configured | info |
 | OBS002 | Observability | Structured logging configured | info |
+| OBS003 | Observability | Telemetry exporter configured | warning |
 | TEST001 | Testing | A matching unit test project exists | warning |
 | TEST002 | Testing | An integration test project exists | info |
 | ARCH001 | Architecture | Api doesn't reference *and use* persistence packages directly | warning |

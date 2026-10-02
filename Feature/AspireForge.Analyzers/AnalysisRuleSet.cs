@@ -26,6 +26,7 @@ public static class AnalysisRuleSet
         new REL007SettingsNotValidatedAtStartup(),
         new OBS001OpenTelemetryMissing(),
         new OBS002StructuredLoggingMissing(),
+        new OBS003TelemetryExporterMissing(),
         new TEST001NoTestProjectDetected(),
         new TEST002NoIntegrationTestsDetected(),
         new ARCH001ApiDirectlyAccessesPersistenceLayer(),
