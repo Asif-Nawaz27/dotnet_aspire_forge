@@ -69,10 +69,25 @@ internal static class SourceFileHeuristics
     // it doesn't understand string literals, so "://" inside a URL string (e.g. an Authority setting)
     // would otherwise look like a line comment. The negative lookbehind for ':' before '//' covers
     // that specific, common case without needing full parsing.
+    //
+    // A removed /* */ block keeps its line breaks, so positions in the result map to the same line
+    // numbers as the original file (see ReadCodeAsync).
     private static string StripComments(string content)
     {
-        content = Regex.Replace(content, @"/\*.*?\*/", string.Empty, RegexOptions.Singleline);
+        content = Regex.Replace(
+            content,
+            @"/\*.*?\*/",
+            match => new string('\n', match.ValueSpan.Count('\n')),
+            RegexOptions.Singleline);
         content = Regex.Replace(content, @"(?<!:)//[^\n]*", string.Empty);
         return content;
     }
+
+    // A file's source with comments stripped, for rules that need to inspect where a match sits
+    // (enclosing blocks, line numbers) rather than only whether it exists.
+    public static async Task<string> ReadCodeAsync(string file, CancellationToken cancellationToken) =>
+        StripComments(await File.ReadAllTextAsync(file, cancellationToken));
+
+    public static int LineOf(string code, int index) =>
+        code.AsSpan(0, index).Count('\n') + 1;
 }

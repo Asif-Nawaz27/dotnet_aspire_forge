@@ -51,3 +51,27 @@ Stays silent when nothing is collected at all - that's OBS001's finding, not a s
 **Fix:** Register an exporter, for example `builder.Services.AddOpenTelemetry().UseOtlpExporter()`
 and point `OTEL_EXPORTER_OTLP_ENDPOINT` at your collector. `aspireforge add telemetry` generates
 this.
+
+## OBS004 - Sensitive data logging enabled
+
+**Default severity:** `error`
+
+Fires for each call to EF Core's `EnableSensitiveDataLogging()` that isn't limited to development.
+The option writes query parameter values - emails, names, tokens, anything a query filters on or
+saves - into logs and exception messages. Locally that's useful; in production it copies personal
+data into every log sink, which is a privacy breach and often a compliance one (GDPR, PCI).
+
+A call counts as limited to development when:
+
+- its argument is an environment check - `EnableSensitiveDataLogging(builder.Environment.IsDevelopment())`
+  or `IsEnvironment("Development")` - or the literal `false`,
+- it sits inside an `if (...IsDevelopment()...)` block (braced or braceless, at any nesting depth -
+  e.g. inside an `AddDbContext` lambda inside the `if`), or
+- it sits inside `#if DEBUG` (before any `#else`/`#endif`).
+
+Negated checks (`!env.IsDevelopment()`), `else` branches, and `#else` sections do **not** count.
+This is a text heuristic, not data-flow analysis: a guard through a variable (`var dev =
+env.IsDevelopment(); if (dev) ...`) isn't recognised - pass the check inline instead. The finding
+reports the file and line of each unguarded call.
+
+**Fix:** `options.EnableSensitiveDataLogging(builder.Environment.IsDevelopment())`.

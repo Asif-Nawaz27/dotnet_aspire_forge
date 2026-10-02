@@ -141,6 +141,7 @@ Full command reference: [`new`](docs/commands/new.md) · [`add`](docs/commands/a
 | OBS001 | Observability | OpenTelemetry configured | info |
 | OBS002 | Observability | Structured logging configured | info |
 | OBS003 | Observability | Telemetry exporter configured | warning |
+| OBS004 | Observability | `EnableSensitiveDataLogging()` limited to development | error |
 | TEST001 | Testing | A matching unit test project exists | warning |
 | TEST002 | Testing | An integration test project exists | info |
 | ARCH001 | Architecture | Api doesn't reference *and use* persistence packages directly | warning |
