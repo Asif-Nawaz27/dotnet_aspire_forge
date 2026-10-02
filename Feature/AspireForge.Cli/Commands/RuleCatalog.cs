@@ -20,6 +20,7 @@ public static class RuleCatalog
         new("Observability", "OBS001", "OpenTelemetry", "OpenTelemetry configured"),
         new("Observability", "OBS002", "Structured logging", "Structured logging"),
         new("Observability", "OBS003", "Telemetry exporter", "Telemetry exporter configured"),
+        new("Observability", "OBS004", "Sensitive data logging", "Sensitive data logging limited to development"),
         new("Testing", "TEST001", "Unit tests", "Unit tests detected"),
         new("Testing", "TEST002", "Integration tests", "Integration tests detected"),
         new("Architecture", "ARCH001", "Dependency violations", "No obvious dependency violations"),
