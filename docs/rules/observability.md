@@ -75,3 +75,16 @@ env.IsDevelopment(); if (dev) ...`) isn't recognised - pass the check inline ins
 reports the file and line of each unguarded call.
 
 **Fix:** `options.EnableSensitiveDataLogging(builder.Environment.IsDevelopment())`.
+
+## OBS005 - Console output instead of ILogger
+
+**Default severity:** `suggestion`
+
+Fires when a web project's code calls `Console.Write`, `Console.WriteLine`, or their
+`Console.Error` variants. Console output has no log level, category, structured properties, or trace
+correlation, and never reaches the configured log sinks (OpenTelemetry, Serilog, ...). Matches
+inside comments are ignored, and non-web projects (CLI tools, workers without
+`WebApplication.CreateBuilder`) are skipped since writing to the console is legitimate there. The
+finding reports the file and line of each call.
+
+**Fix:** Inject `ILogger<T>` and call `logger.LogInformation(...)`.

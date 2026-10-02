@@ -142,6 +142,7 @@ Full command reference: [`new`](docs/commands/new.md) · [`add`](docs/commands/a
 | OBS002 | Observability | Structured logging configured | info |
 | OBS003 | Observability | Telemetry exporter configured | warning |
 | OBS004 | Observability | `EnableSensitiveDataLogging()` limited to development | error |
+| OBS005 | Observability | No `Console.WriteLine` in web app code (use `ILogger`) | suggestion |
 | TEST001 | Testing | A matching unit test project exists | warning |
 | TEST002 | Testing | An integration test project exists | info |
 | ARCH001 | Architecture | Api doesn't reference *and use* persistence packages directly | warning |

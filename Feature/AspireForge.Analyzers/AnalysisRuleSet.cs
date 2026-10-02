@@ -28,6 +28,7 @@ public static class AnalysisRuleSet
         new OBS002StructuredLoggingMissing(),
         new OBS003TelemetryExporterMissing(),
         new OBS004SensitiveDataLoggingEnabled(),
+        new OBS005ConsoleOutputInsteadOfLogger(),
         new TEST001NoTestProjectDetected(),
         new TEST002NoIntegrationTestsDetected(),
         new ARCH001ApiDirectlyAccessesPersistenceLayer(),
