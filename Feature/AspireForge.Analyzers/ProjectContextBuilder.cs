@@ -23,12 +23,15 @@ public static class ProjectContextBuilder
             .Distinct()
             .ToList();
 
+        var targetFrameworks = ReadTargetFrameworks(document) ?? ReadTargetFrameworksFromBuildProps(rootDirectory) ?? [];
+
         return new ProjectContext
         {
             RootDirectory = rootDirectory,
             ProjectFile = projectFile,
             ProjectName = Path.GetFileNameWithoutExtension(projectFile),
-            TargetFramework = ReadTargetFramework(document),
+            TargetFramework = targetFrameworks.FirstOrDefault(),
+            TargetFrameworks = targetFrameworks,
             SourceFiles = sourceFiles,
             ProjectReferences = projectReferences,
             PackageReferences = ReadIncludes(document, "PackageReference"),
@@ -94,17 +97,49 @@ public static class ProjectContextBuilder
         return File.Exists(apiProject) ? apiProject : null;
     }
 
-    private static string? ReadTargetFramework(XDocument document)
+    // Null when the document sets neither property, so the caller can fall back to Directory.Build.props.
+    // Values that reference MSBuild properties ("$(...)") can't be evaluated without MSBuild and are dropped.
+    // Matched by local name so files using the legacy MSBuild XML namespace are read too.
+    private static List<string>? ReadTargetFrameworks(XDocument document)
     {
-        var targetFramework = document.Descendants("TargetFramework").FirstOrDefault()?.Value;
-        if (!string.IsNullOrWhiteSpace(targetFramework))
+        var value = FirstElementValue(document, "TargetFramework") ?? FirstElementValue(document, "TargetFrameworks");
+
+        return value?
+            .Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+            .Where(framework => !framework.Contains("$(", StringComparison.Ordinal))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static string? FirstElementValue(XDocument document, string localName) =>
+        document.Descendants()
+            .FirstOrDefault(element => element.Name.LocalName == localName && !string.IsNullOrWhiteSpace(element.Value))?
+            .Value;
+
+    // MSBuild imports the nearest Directory.Build.props above the project automatically, which is a
+    // common place to set the framework once for a whole solution (this repository does).
+    private static List<string>? ReadTargetFrameworksFromBuildProps(string projectDirectory)
+    {
+        for (var directory = new DirectoryInfo(projectDirectory); directory is not null; directory = directory.Parent)
         {
-            return targetFramework;
+            var props = Path.Combine(directory.FullName, "Directory.Build.props");
+
+            if (!File.Exists(props))
+            {
+                continue;
+            }
+
+            try
+            {
+                return ReadTargetFrameworks(XDocument.Load(props));
+            }
+            catch (System.Xml.XmlException)
+            {
+                return null;
+            }
         }
 
-        var targetFrameworks = document.Descendants("TargetFrameworks").FirstOrDefault()?.Value;
-        return targetFrameworks?.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
-            .FirstOrDefault();
+        return null;
     }
 
     private static List<string> ReadIncludes(XDocument document, string elementName) =>
