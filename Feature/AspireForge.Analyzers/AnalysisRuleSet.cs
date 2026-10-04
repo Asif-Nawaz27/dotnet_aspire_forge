@@ -1,4 +1,5 @@
 using AspireForge.Analyzers.Rules.Architecture;
+using AspireForge.Analyzers.Rules.Deployment;
 using AspireForge.Analyzers.Rules.Observability;
 using AspireForge.Analyzers.Rules.Performance;
 using AspireForge.Analyzers.Rules.Reliability;
@@ -35,6 +36,7 @@ public static class AnalysisRuleSet
         new PERF001ResponseCompressionMissing(),
         new PERF002RateLimitingMissing(),
         new PERF003BlockingCallOnAsyncCode(),
+        new DEP001UnsupportedTargetFramework(),
     ];
 
     public static IReadOnlyList<IAnalysisRule> ApplyConfig(IReadOnlyList<IAnalysisRule> rules, AspireForgeConfig config) =>

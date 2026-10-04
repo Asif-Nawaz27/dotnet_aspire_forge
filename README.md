@@ -149,11 +149,12 @@ Full command reference: [`new`](docs/commands/new.md) · [`add`](docs/commands/a
 | PERF001 | Performance | Response compression configured | suggestion |
 | PERF002 | Performance | Rate limiting configured | suggestion |
 | PERF003 | Performance | No blocking calls (`.Wait()`, `.GetAwaiter().GetResult()`) on async code | warning |
+| DEP001 | Deployment | Target framework is still supported by Microsoft | error |
 
 Details and fixes for each: [security](docs/rules/security.md) ·
 [reliability](docs/rules/reliability.md) · [observability](docs/rules/observability.md) ·
 [testing](docs/rules/testing.md) · [architecture](docs/rules/architecture.md) ·
-[performance](docs/rules/performance.md).
+[performance](docs/rules/performance.md) · [deployment](docs/rules/deployment.md).
 
 ## Roadmap
 

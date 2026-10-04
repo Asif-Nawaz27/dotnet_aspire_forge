@@ -31,6 +31,80 @@ public class ProjectContextBuilderTests : IDisposable
     }
 
     [Fact]
+    public void Build_ReadsEveryFramework_WhenMultiTargeting()
+    {
+        var apiDirectory = WriteProject("""
+            <Project Sdk="Microsoft.NET.Sdk">
+              <PropertyGroup>
+                <TargetFrameworks>net8.0; net10.0;$(ExtraFramework)</TargetFrameworks>
+              </PropertyGroup>
+            </Project>
+            """);
+
+        var context = ProjectContextBuilder.Build(apiDirectory);
+
+        Assert.Equal(["net8.0", "net10.0"], context.TargetFrameworks);
+        Assert.Equal("net8.0", context.TargetFramework);
+    }
+
+    [Fact]
+    public void Build_FallsBackToTheNearestDirectoryBuildProps()
+    {
+        Directory.CreateDirectory(_root);
+        File.WriteAllText(Path.Combine(_root, "Directory.Build.props"), """
+            <Project>
+              <PropertyGroup>
+                <TargetFramework>net9.0</TargetFramework>
+              </PropertyGroup>
+            </Project>
+            """);
+        var apiDirectory = WriteProject("""<Project Sdk="Microsoft.NET.Sdk.Web" />""");
+
+        var context = ProjectContextBuilder.Build(apiDirectory);
+
+        Assert.Equal(["net9.0"], context.TargetFrameworks);
+    }
+
+    [Fact]
+    public void Build_PrefersTheProjectFile_OverDirectoryBuildProps()
+    {
+        Directory.CreateDirectory(_root);
+        File.WriteAllText(
+            Path.Combine(_root, "Directory.Build.props"),
+            "<Project><PropertyGroup><TargetFramework>net9.0</TargetFramework></PropertyGroup></Project>");
+        var apiDirectory = WriteProject(
+            "<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup><TargetFramework>net10.0</TargetFramework></PropertyGroup></Project>");
+
+        var context = ProjectContextBuilder.Build(apiDirectory);
+
+        Assert.Equal(["net10.0"], context.TargetFrameworks);
+    }
+
+    [Fact]
+    public void Build_ReadsLegacyProjectsUsingTheMsBuildNamespace()
+    {
+        var apiDirectory = WriteProject("""
+            <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+              <PropertyGroup>
+                <TargetFramework>net6.0</TargetFramework>
+              </PropertyGroup>
+            </Project>
+            """);
+
+        var context = ProjectContextBuilder.Build(apiDirectory);
+
+        Assert.Equal(["net6.0"], context.TargetFrameworks);
+    }
+
+    private string WriteProject(string csproj)
+    {
+        var apiDirectory = Path.Combine(_root, "Api");
+        Directory.CreateDirectory(apiDirectory);
+        File.WriteAllText(Path.Combine(apiDirectory, "Api.csproj"), csproj);
+        return apiDirectory;
+    }
+
+    [Fact]
     public void Build_IncludesSourceFilesFromReferencedProjects()
     {
         var apiDirectory = Path.Combine(_root, "Api");
