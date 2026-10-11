@@ -11,6 +11,7 @@ public static class RuleCatalog
         new("Security", "SEC003", "HTTPS", "HTTPS configured"),
         new("Security", "SEC004", "Secrets in config", "No secrets in configuration files"),
         new("Security", "SEC008", "Authorization", "Authorization enforced on endpoints"),
+        new("Security", "SEC009", "Middleware order", "Middleware in a working order"),
         new("Reliability", "REL001", "Health checks", "Health checks configured"),
         new("Reliability", "REL002", "Exception handling", "Global exception handling"),
         new("Reliability", "REL003", "HTTP resilience", "Outbound HTTP has resilience"),

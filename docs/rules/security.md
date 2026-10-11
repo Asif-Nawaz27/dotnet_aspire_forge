@@ -85,3 +85,41 @@ everything by default with a fallback policy and opt specific endpoints out with
 builder.Services.AddAuthorization(options =>
     options.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
 ```
+
+## SEC009 - Middleware in the wrong order
+
+**Default severity:** `error` (authentication/authorization) / `warning` (everything else)
+
+Middleware runs in the order it's added, and several pairs only work one way round. The wrong order
+compiles, starts, and passes a casual smoke test, then breaks under real traffic. SEC009 checks
+these pairs, following the
+[ASP.NET Core middleware order](https://learn.microsoft.com/aspnet/core/fundamentals/middleware/#middleware-order):
+
+| Must come first | Before | If reversed | Severity |
+| --- | --- | --- | --- |
+| `UseAuthentication` | `UseAuthorization` | authorization runs before the caller is identified, so protected endpoints reject valid credentials | error |
+| `UseRouting` | `UseAuthorization` | authorization can't see the endpoint's `[Authorize]` / `RequireAuthorization()` requirements | error |
+| `UseCors` | `UseAuthorization` | CORS preflight (`OPTIONS`) requests carry no credentials, so authorization rejects them and browsers block the call | warning |
+| `UseRouting` | `UseCors` | endpoint-specific CORS policies (`[EnableCors]`, `RequireCors`) are ignored | warning |
+| `UseRouting` | `UseRateLimiter` | endpoint-specific rate limit policies (`[EnableRateLimiting]`, `RequireRateLimiting`) are ignored | warning |
+| `UseExceptionHandler` / `UseDeveloperExceptionPage` | `UseRouting`, `UseCors`, `UseAuthentication`, `UseAuthorization`, `UseRateLimiter`, `UseResponseCompression` | exceptions thrown by the earlier middleware bypass the error handler | warning |
+
+A pair is checked only when both calls appear in the same source file, comparing the position of
+each call's first occurrence. The `UseRouting` pairs apply only when `UseRouting()` is called
+explicitly - without it, `WebApplication` adds routing at the start of the pipeline. Mentions in
+comments are ignored. The finding lists each violation with its file and line, most severe first.
+
+**Fix:** Reorder the calls in `Program.cs`. A safe order:
+
+```csharp
+app.UseExceptionHandler();
+app.UseHsts();
+app.UseHttpsRedirection();
+app.UseResponseCompression();
+app.UseRouting();          // only if you call it explicitly
+app.UseCors("Frontend");
+app.UseAuthentication();
+app.UseAuthorization();
+app.UseRateLimiter();
+app.MapControllers();
+```
