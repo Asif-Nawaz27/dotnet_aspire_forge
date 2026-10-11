@@ -18,6 +18,7 @@ public static class AnalysisRuleSet
         new SEC002CorsPolicyAllowsUnrestrictedOrigins(),
         new SEC003HttpsRedirectionMissing(),
         new SEC004SecretsInConfiguration(),
+        new SEC008AuthorizationNotEnforced(),
         new REL001HealthChecksMissing(),
         new REL002GlobalExceptionHandlingMissing(),
         new REL003OutboundHttpWithoutResilience(),
