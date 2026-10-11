@@ -10,6 +10,8 @@ public sealed partial class GlobalExceptionHandler(
     IProblemDetailsService problemDetailsService,
     ILogger<GlobalExceptionHandler> logger) : IExceptionHandler
 {
+    //TODO: Consider using a 400 for OperationCanceledException when the request is canceled by the client, but
+    //      that would require a custom middleware to detect the cancellation and throw a different exception
     // Non-standard but widely used (nginx) status for "client closed the connection".
     private const int ClientClosedRequest = 499;
 
