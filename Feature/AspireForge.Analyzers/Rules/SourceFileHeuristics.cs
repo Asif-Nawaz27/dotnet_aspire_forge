@@ -90,4 +90,24 @@ internal static class SourceFileHeuristics
 
     public static int LineOf(string code, int index) =>
         code.AsSpan(0, index).Count('\n') + 1;
+
+    // The text between a call's parentheses, given the index just past its opening '(' - honouring
+    // nested parentheses. Parentheses inside string literals aren't distinguished (no tokenizer), which
+    // is fine for the argument shapes rules inspect. Empty if the call is never closed.
+    public static string ReadCallArguments(string code, int openParenEnd)
+    {
+        var depth = 1;
+
+        for (var i = openParenEnd; i < code.Length; i++)
+        {
+            depth += code[i] switch { '(' => 1, ')' => -1, _ => 0 };
+
+            if (depth == 0)
+            {
+                return code[openParenEnd..i];
+            }
+        }
+
+        return string.Empty;
+    }
 }

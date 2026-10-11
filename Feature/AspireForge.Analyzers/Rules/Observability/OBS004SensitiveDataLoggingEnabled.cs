@@ -37,7 +37,7 @@ public sealed partial class OBS004SensitiveDataLoggingEnabled : IAnalysisRule
 
             foreach (Match call in SensitiveDataLoggingCall().Matches(code))
             {
-                var argument = ReadArgument(code, call.Index + call.Length);
+                var argument = SourceFileHeuristics.ReadCallArguments(code, call.Index + call.Length);
 
                 if (!IsLimitedToDevelopment(code, call.Index, argument))
                 {
@@ -139,24 +139,6 @@ public sealed partial class OBS004SensitiveDataLoggingEnabled : IAnalysisRule
     // A positive check only: `!env.IsDevelopment()` guards the opposite case.
     private static bool IsDevelopmentCheck(string text) =>
         DevelopmentCheck().IsMatch(text) && !NegatedDevelopmentCheck().IsMatch(text);
-
-    // The text between the call's parentheses, honouring nested parentheses.
-    private static string ReadArgument(string code, int openParenEnd)
-    {
-        var depth = 1;
-
-        for (var i = openParenEnd; i < code.Length; i++)
-        {
-            depth += code[i] switch { '(' => 1, ')' => -1, _ => 0 };
-
-            if (depth == 0)
-            {
-                return code[openParenEnd..i];
-            }
-        }
-
-        return string.Empty;
-    }
 
     [GeneratedRegex(@"\bEnableSensitiveDataLogging\s*\(")]
     private static partial Regex SensitiveDataLoggingCall();
