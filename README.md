@@ -132,6 +132,7 @@ Full command reference: [`new`](docs/commands/new.md) · [`add`](docs/commands/a
 | SEC003 | Security | HTTPS redirection configured | warning |
 | SEC004 | Security | No literal secrets in `appsettings*.json` | error |
 | SEC008 | Security | Authorization actually required somewhere when authentication is configured | warning |
+| SEC009 | Security | Middleware order (authentication, authorization, CORS, routing, exception handler) | error |
 | REL001 | Reliability | Health checks configured | warning |
 | REL002 | Reliability | Global exception handling configured | warning |
 | REL003 | Reliability | Outbound HTTP has resilience; no `new HttpClient(` | warning |
