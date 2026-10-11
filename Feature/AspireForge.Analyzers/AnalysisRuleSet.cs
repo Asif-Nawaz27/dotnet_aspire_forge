@@ -20,6 +20,7 @@ public static class AnalysisRuleSet
         new SEC004SecretsInConfiguration(),
         new SEC008AuthorizationNotEnforced(),
         new SEC009MiddlewareOrder(),
+        new SEC011SqlInjectionInRawSql(),
         new REL001HealthChecksMissing(),
         new REL002GlobalExceptionHandlingMissing(),
         new REL003OutboundHttpWithoutResilience(),

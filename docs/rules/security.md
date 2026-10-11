@@ -123,3 +123,45 @@ app.UseAuthorization();
 app.UseRateLimiter();
 app.MapControllers();
 ```
+
+## SEC011 - SQL injection risk in raw SQL
+
+**Default severity:** `error`
+
+Fires when SQL is built from runtime values at the call site of an API that executes it verbatim.
+The value is pasted into the SQL text, so input such as `' OR 1=1 --` changes the query instead of
+being treated as data.
+
+Unsafe first-argument shapes:
+
+- an interpolated string with holes - `FromSqlRaw($"... WHERE Name = '{name}'")`
+- `string.Format(...)` - `ExecuteSqlRaw(string.Format("... {0}", id))`
+- a literal concatenated with a non-literal - `new SqlCommand("... WHERE Id = " + id, conn)`
+
+APIs checked:
+
+| API | Flagged for |
+| --- | --- |
+| EF Core `FromSqlRaw`, `ExecuteSqlRaw(Async)`, `SqlQueryRaw` | interpolation, concatenation, `string.Format` |
+| EF Core `FromSql`, `ExecuteSql(Async)`, `SqlQuery`, `ExecuteSqlCommand(Async)` | concatenation, `string.Format` only - with an interpolated string these take a `FormattableString` and turn every hole into a parameter, which is the safe pattern |
+| ADO.NET `new SqlCommand` / `NpgsqlCommand` / `MySqlCommand` / `SqliteCommand` / `OracleCommand` / `OdbcCommand` / `OleDbCommand`, and `CommandText = ...` | interpolation, concatenation, `string.Format` |
+| Dapper `Query*` / `Execute*` (only in files with `using Dapper;`) | interpolation, concatenation, `string.Format` |
+
+Not flagged: parameterised calls (`FromSqlRaw("... {0}", id)`, `@id` with `SqlParameter`), constant
+SQL (`"SELECT a " + "FROM b"`, interpolated strings with no holes or only `{{escaped}}` braces),
+comments, and a variable passed in (`FromSqlRaw(sql)`) - where that variable was built isn't
+visible to a text heuristic. The finding lists each call with its file and line.
+
+**Fix:** Let the database driver handle the values:
+
+```csharp
+// EF Core: FromSql/ExecuteSql/SqlQuery parameterise every interpolation hole
+db.Users.FromSql($"SELECT * FROM users WHERE name = {name}");
+
+// ADO.NET
+command.CommandText = "SELECT * FROM users WHERE name = @name";
+command.Parameters.AddWithValue("name", name);
+
+// Dapper
+connection.Query<User>("SELECT * FROM users WHERE name = @name", new { name });
+```
