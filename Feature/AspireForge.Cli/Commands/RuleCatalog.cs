@@ -10,6 +10,7 @@ public static class RuleCatalog
         new("Security", "SEC002", "CORS", "CORS policy restricts origins"),
         new("Security", "SEC003", "HTTPS", "HTTPS configured"),
         new("Security", "SEC004", "Secrets in config", "No secrets in configuration files"),
+        new("Security", "SEC005", "JWT validation", "JWT validation not weakened"),
         new("Security", "SEC008", "Authorization", "Authorization enforced on endpoints"),
         new("Security", "SEC009", "Middleware order", "Middleware in a working order"),
         new("Security", "SEC011", "SQL injection", "No SQL built from runtime values"),

@@ -73,85 +73,14 @@ public sealed partial class OBS004SensitiveDataLoggingEnabled : IAnalysisRule
     {
         var trimmed = argument.Trim();
 
-        if (trimmed == "false" || IsDevelopmentCheck(trimmed))
+        if (trimmed == "false" || DevelopmentGuard.IsDevelopmentCheck(trimmed))
         {
             return true;
         }
 
-        return IsInsideDebugDirective(code, callIndex)
-            || IsInBracelessDevelopmentIf(code, callIndex)
-            || IsInsideDevelopmentBlock(code, callIndex);
+        return DevelopmentGuard.Covers(code, callIndex);
     }
-
-    // `if (env.IsDevelopment()) options.EnableSensitiveDataLogging();` - the statement header is
-    // everything since the previous statement or block boundary.
-    private static bool IsInBracelessDevelopmentIf(string code, int callIndex)
-    {
-        var start = code.LastIndexOfAny([';', '{', '}'], Math.Max(0, callIndex - 1)) + 1;
-        return IsDevelopmentIfHeader(code[start..callIndex]);
-    }
-
-    // Walks outward through every enclosing `{`, checking the header in front of each one, so a call
-    // nested inside a lambda inside a development-only `if` is still recognised.
-    private static bool IsInsideDevelopmentBlock(string code, int callIndex)
-    {
-        var depth = 0;
-
-        for (var i = callIndex - 1; i >= 0; i--)
-        {
-            switch (code[i])
-            {
-                case '}':
-                    depth++;
-                    break;
-
-                case '{' when depth > 0:
-                    depth--;
-                    break;
-
-                case '{':
-                    var headerStart = i == 0 ? 0 : code.LastIndexOfAny([';', '{', '}'], i - 1) + 1;
-
-                    if (IsDevelopmentIfHeader(code[headerStart..i]))
-                    {
-                        return true;
-                    }
-
-                    break;
-            }
-        }
-
-        return false;
-    }
-
-    private static bool IsInsideDebugDirective(string code, int callIndex)
-    {
-        var before = code[..callIndex];
-        var debugIf = DebugDirective().Matches(before).LastOrDefault();
-
-        return debugIf is not null && before.IndexOf("#endif", debugIf.Index, StringComparison.Ordinal) < 0
-            && before.IndexOf("#else", debugIf.Index, StringComparison.Ordinal) < 0;
-    }
-
-    private static bool IsDevelopmentIfHeader(string header) =>
-        IfKeyword().IsMatch(header) && IsDevelopmentCheck(header);
-
-    // A positive check only: `!env.IsDevelopment()` guards the opposite case.
-    private static bool IsDevelopmentCheck(string text) =>
-        DevelopmentCheck().IsMatch(text) && !NegatedDevelopmentCheck().IsMatch(text);
 
     [GeneratedRegex(@"\bEnableSensitiveDataLogging\s*\(")]
     private static partial Regex SensitiveDataLoggingCall();
-
-    [GeneratedRegex(@"\bIsDevelopment\s*\(\s*\)|\bIsEnvironment\s*\(\s*""Development""\s*\)")]
-    private static partial Regex DevelopmentCheck();
-
-    [GeneratedRegex(@"!\s*[\w.]*(?:IsDevelopment\s*\(|IsEnvironment\s*\(\s*""Development"")")]
-    private static partial Regex NegatedDevelopmentCheck();
-
-    [GeneratedRegex(@"\bif\s*\(")]
-    private static partial Regex IfKeyword();
-
-    [GeneratedRegex(@"^[ \t]*#if[ \t]+DEBUG\b", RegexOptions.Multiline)]
-    private static partial Regex DebugDirective();
 }
