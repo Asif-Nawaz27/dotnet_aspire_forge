@@ -53,6 +53,42 @@ secret value.
 in development, environment variables (e.g. `Jwt__SigningKey`) or a secret store such as Azure Key
 Vault in production.
 
+## SEC005 - Weak JWT validation
+
+**Default severity:** `error` (authenticity/expiry) / `warning` (everything else)
+
+Flags JWT bearer settings that switch off a check the token handler performs by default. These are
+usually added to get past an error during development - "IDX10223: Lifetime validation failed" -
+and then ship, quietly turning token *validation* into token *parsing*.
+
+| Setting | What it allows | Severity |
+| --- | --- | --- |
+| `RequireSignedTokens = false` | unsigned (`"alg": "none"`) tokens | error |
+| `SignatureValidator` that returns `new JwtSecurityToken(token)` / `new JsonWebToken(token)` | tokens with no signature check at all - anyone can mint one | error |
+| `ValidateLifetime = false` | expired tokens, forever | error |
+| `ValidateIssuer = false` | tokens from any issuer that shares the signing key | warning |
+| `ValidateAudience = false` | tokens minted for a different API | warning |
+| `RequireExpirationTime = false` | tokens with no expiry, which never expire | warning |
+| `RequireHttpsMetadata = false` | signing keys fetched over plain HTTP, replaceable in transit | warning |
+| `ClockSkew` above 5 minutes (`TimeSpan.MaxValue`, `FromHours(1)`, ...) | every token outliving its expiry by that much | warning |
+
+Only literal assignments count (`ValidateLifetime = false`, not `== false` comparisons or computed
+values such as `RequireHttpsMetadata = !env.IsDevelopment()`). Settings inside a development-only
+guard - `if (...IsDevelopment())` at any nesting depth, or `#if DEBUG` - are allowed; negated checks
+and `IsProduction()` are not. The finding lists each setting with its file and line, most severe
+first.
+
+`ValidateIssuerSigningKey = false` is deliberately **not** flagged: it's the default, and it doesn't
+disable signature validation - it only skips extra checks on the key itself, such as certificate
+expiry.
+
+**Fix:** Keep the defaults and configure the values the checks need (`ValidIssuer`,
+`ValidAudience`, the signing key or `Authority`). If a relaxed setting is needed locally, limit it:
+
+```csharp
+options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
+```
+
 ## SEC008 - Authorization not enforced
 
 **Default severity:** `warning`
