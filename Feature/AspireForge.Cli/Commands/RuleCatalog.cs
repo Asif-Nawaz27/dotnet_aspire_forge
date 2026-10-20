@@ -13,6 +13,7 @@ public static class RuleCatalog
         new("Security", "SEC005", "JWT validation", "JWT validation not weakened"),
         new("Security", "SEC008", "Authorization", "Authorization enforced on endpoints"),
         new("Security", "SEC009", "Middleware order", "Middleware in a working order"),
+        new("Security", "SEC010", "TLS validation", "TLS certificates validated"),
         new("Security", "SEC011", "SQL injection", "No SQL built from runtime values"),
         new("Reliability", "REL001", "Health checks", "Health checks configured"),
         new("Reliability", "REL002", "Exception handling", "Global exception handling"),

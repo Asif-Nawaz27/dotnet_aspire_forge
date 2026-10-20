@@ -160,6 +160,41 @@ app.UseRateLimiter();
 app.MapControllers();
 ```
 
+## SEC010 - TLS certificate validation disabled
+
+**Default severity:** `error` (callbacks) / `warning` (`TrustServerCertificate`)
+
+Flags code that accepts any TLS certificate. The connection is still encrypted - but to whoever
+answers, so anyone on the network path can present their own certificate and read or change the
+traffic (a man-in-the-middle attack). This is almost always a "temporary" fix for a self-signed
+certificate in development that then ships.
+
+| Pattern | Severity |
+| --- | --- |
+| `HttpClientHandler.DangerousAcceptAnyServerCertificateValidator` | error |
+| `ServerCertificateCustomValidationCallback` set to a callback that always returns `true` | error |
+| `RemoteCertificateValidationCallback` (`SslStream`, `SslClientAuthenticationOptions`) that always returns `true` | error |
+| `ServicePointManager.ServerCertificateValidationCallback` that always returns `true` - affects every connection in the process | error |
+| `TrustServerCertificate=true` / `Trust Server Certificate=true` in a connection string (C# source, or `appsettings*.json` other than `appsettings.Development.json`) | warning |
+
+"Always returns `true`" covers `(_, _, _, _) => true`, `=> { return true; }`, and
+`delegate { return true; }`, assigned with `=` or `+=`. A callback that actually inspects the
+certificate (`errors == SslPolicyErrors.None`, a thumbprint comparison) is not flagged, and neither
+is a method group (`= ValidatePinnedCertificate`) whose body isn't visible to the rule. Code inside
+a development-only guard (`if (...IsDevelopment())`, `#if DEBUG`) is allowed. The finding lists each
+occurrence with its file and line, errors first.
+
+**Fix:** Trust the specific certificate rather than every certificate - install its CA on the
+machine or container, or pin it in the callback:
+
+```csharp
+handler.ServerCertificateCustomValidationCallback = (_, cert, _, errors) =>
+    errors == SslPolicyErrors.None || cert?.GetCertHashString() == expectedThumbprint;
+```
+
+For databases, use a certificate the server's clients trust and remove `TrustServerCertificate`;
+keep any bypass in `appsettings.Development.json` or behind `IsDevelopment()`.
+
 ## SEC011 - SQL injection risk in raw SQL
 
 **Default severity:** `error`

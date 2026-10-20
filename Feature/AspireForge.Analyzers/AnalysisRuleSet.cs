@@ -21,6 +21,7 @@ public static class AnalysisRuleSet
         new SEC005WeakJwtValidation(),
         new SEC008AuthorizationNotEnforced(),
         new SEC009MiddlewareOrder(),
+        new SEC010TlsCertificateValidationDisabled(),
         new SEC011SqlInjectionInRawSql(),
         new REL001HealthChecksMissing(),
         new REL002GlobalExceptionHandlingMissing(),

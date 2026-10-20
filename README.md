@@ -134,6 +134,7 @@ Full command reference: [`new`](docs/commands/new.md) · [`add`](docs/commands/a
 | SEC005 | Security | JWT validation checks not switched off (lifetime, signature, issuer, audience, HTTPS metadata, clock skew) | error |
 | SEC008 | Security | Authorization actually required somewhere when authentication is configured | warning |
 | SEC009 | Security | Middleware order (authentication, authorization, CORS, routing, exception handler) | error |
+| SEC010 | Security | TLS certificate validation not switched off (always-true callbacks, `TrustServerCertificate=true`) | error |
 | SEC011 | Security | No SQL built from interpolation or concatenation in raw SQL APIs | error |
 | REL001 | Reliability | Health checks configured | warning |
 | REL002 | Reliability | Global exception handling configured | warning |
