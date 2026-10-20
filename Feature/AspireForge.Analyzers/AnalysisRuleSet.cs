@@ -23,6 +23,7 @@ public static class AnalysisRuleSet
         new SEC009MiddlewareOrder(),
         new SEC010TlsCertificateValidationDisabled(),
         new SEC011SqlInjectionInRawSql(),
+        new SEC012UnsafeDeserialization(),
         new REL001HealthChecksMissing(),
         new REL002GlobalExceptionHandlingMissing(),
         new REL003OutboundHttpWithoutResilience(),
