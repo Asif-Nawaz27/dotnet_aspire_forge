@@ -236,3 +236,41 @@ command.Parameters.AddWithValue("name", name);
 // Dapper
 connection.Query<User>("SELECT * FROM users WHERE name = @name", new { name });
 ```
+
+## SEC012 - Unsafe deserialization
+
+**Default severity:** `error` (`warning` when a `SerializationBinder` is set)
+
+Flags deserializers that let the payload choose which .NET type to create. An attacker who controls
+the input - a request body, cookie, cache entry, or queue message - can name a "gadget" type whose
+constructor or property setters run code: remote code execution from a crafted payload.
+
+| Pattern | Severity |
+| --- | --- |
+| `BinaryFormatter`, `SoapFormatter`, `NetDataContractSerializer`, `LosFormatter`, `ObjectStateFormatter` | error |
+| `new JavaScriptSerializer(new SimpleTypeResolver())` | error |
+| Newtonsoft.Json `TypeNameHandling` / `ItemTypeNameHandling` = `All`, `Auto`, `Objects`, or `Arrays` - on `JsonSerializerSettings`, `JsonSerializer`, or `[JsonProperty(...)]` | error |
+| the same `TypeNameHandling` in a file that also assigns a `SerializationBinder` | warning |
+
+The formatters are on Microsoft's
+[insecure deserializers list](https://learn.microsoft.com/dotnet/standard/serialization/binaryformatter-security-guide):
+they can't be made safe for untrusted input. Every `TypeNameHandling` value other than `None` is
+exploitable, not only `All`/`Auto` (code analysis rules CA2326/CA2327). A `SerializationBinder` can
+restrict the allowed types, so with one present the finding drops to a warning - the rule can't
+verify that the binder actually allow-lists them.
+
+Not flagged: `TypeNameHandling.None`, comparisons (`== TypeNameHandling.Auto`), System.Text.Json
+(it never reads type names from the payload, and `[JsonDerivedType]` polymorphism is an explicit
+allow-list), and look-alike names such as `MyBinaryFormatterWrapper`.
+
+**Fix:** Deserialize into known types with System.Text.Json, using `[JsonDerivedType]` where you
+need polymorphism:
+
+```csharp
+[JsonDerivedType(typeof(CardPayment), "card")]
+[JsonDerivedType(typeof(BankPayment), "bank")]
+public abstract record Payment;
+```
+
+If you must keep Newtonsoft type names, set a `SerializationBinder` that allow-lists exactly the
+expected types.

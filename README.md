@@ -136,6 +136,7 @@ Full command reference: [`new`](docs/commands/new.md) · [`add`](docs/commands/a
 | SEC009 | Security | Middleware order (authentication, authorization, CORS, routing, exception handler) | error |
 | SEC010 | Security | TLS certificate validation not switched off (always-true callbacks, `TrustServerCertificate=true`) | error |
 | SEC011 | Security | No SQL built from interpolation or concatenation in raw SQL APIs | error |
+| SEC012 | Security | No `BinaryFormatter`-style serializers or Newtonsoft `TypeNameHandling` other than `None` | error |
 | REL001 | Reliability | Health checks configured | warning |
 | REL002 | Reliability | Global exception handling configured | warning |
 | REL003 | Reliability | Outbound HTTP has resilience; no `new HttpClient(` | warning |
