@@ -24,6 +24,7 @@ public static class AnalysisRuleSet
         new SEC010TlsCertificateValidationDisabled(),
         new SEC011SqlInjectionInRawSql(),
         new SEC012UnsafeDeserialization(),
+        new SEC013HardcodedSecretsInCode(),
         new REL001HealthChecksMissing(),
         new REL002GlobalExceptionHandlingMissing(),
         new REL003OutboundHttpWithoutResilience(),
