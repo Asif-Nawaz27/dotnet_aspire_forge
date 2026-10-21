@@ -145,6 +145,7 @@ Full command reference: [`new`](docs/commands/new.md) · [`add`](docs/commands/a
 | REL005 | Reliability | No `EnsureCreated()` in app code | warning |
 | REL006 | Reliability | Database retry policy (`EnableRetryOnFailure`) configured | suggestion |
 | REL007 | Reliability | Settings validated at startup (`ValidateOnStart`) | warning |
+| REL008 | Reliability | No `async void` methods outside event handlers | warning |
 | OBS001 | Observability | OpenTelemetry configured | info |
 | OBS002 | Observability | Structured logging configured | info |
 | OBS003 | Observability | Telemetry exporter configured | warning |
