@@ -32,6 +32,7 @@ public static class AnalysisRuleSet
         new REL005EnsureCreatedUsed(),
         new REL006DatabaseRetryPolicyMissing(),
         new REL007SettingsNotValidatedAtStartup(),
+        new REL008AsyncVoidMethod(),
         new OBS001OpenTelemetryMissing(),
         new OBS002StructuredLoggingMissing(),
         new OBS003TelemetryExporterMissing(),

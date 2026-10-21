@@ -24,6 +24,7 @@ public static class RuleCatalog
         new("Reliability", "REL005", "Migrations", "No EnsureCreated in app code"),
         new("Reliability", "REL006", "DB retry policy", "Database retry policy configured"),
         new("Reliability", "REL007", "Settings validation", "Settings validated at startup"),
+        new("Reliability", "REL008", "async void", "No async void methods"),
         new("Observability", "OBS001", "OpenTelemetry", "OpenTelemetry configured"),
         new("Observability", "OBS002", "Structured logging", "Structured logging"),
         new("Observability", "OBS003", "Telemetry exporter", "Telemetry exporter configured"),

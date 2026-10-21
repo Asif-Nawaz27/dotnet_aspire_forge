@@ -83,3 +83,29 @@ Fires when configuration is bound to options without `ValidateOnStart`:
 Bad settings then only fail on first use, mid-request.
 
 **Fix:** `services.AddOptions<T>().BindConfiguration("Section").ValidateDataAnnotations().ValidateOnStart()`.
+
+## REL008 - async void method
+
+**Default severity:** `warning`
+
+An `async void` method returns no `Task`, so there's nothing for the caller to await:
+
+- **Exceptions crash the process.** An exception thrown after the method's first `await` can't reach
+  the caller's `try`/`catch`; it's raised on the thread pool, unhandled, and an unhandled exception
+  terminates the process - taking every in-flight request with it, not just the one that failed.
+- **The caller can't wait for it.** The request can complete, and its scoped services (a
+  `DbContext`, for example) can be disposed, while the method is still using them.
+
+Flags every `async void` method declaration, including local functions and overrides, with its file
+and line. Event handlers are exempt - recognised by the `(object sender, ...EventArgs e)` signature,
+where the delegate type forces `void`. Async lambdas aren't flagged (their delegate type isn't visible
+to the rule), and neither are comments or string literals.
+
+**Fix:** Return `Task` (or `ValueTask`) and await the call:
+
+```csharp
+public async Task NotifyAsync(Order order) => await _email.SendAsync(order.CustomerEmail);
+```
+
+For genuine fire-and-forget work, hand it to a `BackgroundService` or a queue that has its own error
+handling, rather than starting it from a request.
