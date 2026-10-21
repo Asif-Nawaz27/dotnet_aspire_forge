@@ -274,3 +274,40 @@ public abstract record Payment;
 
 If you must keep Newtonsoft type names, set a `SerializationBinder` that allow-lists exactly the
 expected types.
+
+## SEC013 - Hard-coded secrets in code
+
+**Default severity:** `error`
+
+[SEC004](#sec004---secrets-in-configuration-files)'s counterpart for C# source: secrets written as
+string literals. Once compiled they're in every build artifact and container image - and in source
+control history forever, even after the line is deleted, so the secret has to be rotated.
+
+| Pattern | Example |
+| --- | --- |
+| Literal key material passed to a crypto API | `new SymmetricSecurityKey(Encoding.UTF8.GetBytes("..."))`, `new SymmetricSecurityKey(Convert.FromBase64String("..."))`, `new HMACSHA256(Encoding.UTF8.GetBytes("..."))` |
+| A literal password in a credential | `new NetworkCredential("user", "...")` |
+| A connection-string credential in a string literal | `"Host=db;Password=..."`, also `Pwd=`, `AccountKey=`, `SharedAccessKey=` |
+| A literal assigned to a secret-named variable, field, property, or named argument | names ending in `Password`, `Pwd`, `Secret`, `ApiKey`, `SigningKey`, `PrivateKey`, `AccessKey`, or `Token` - e.g. `const string ApiKey = "sk_live_..."`, `public string GitHubToken { get; set; } = "ghp_..."`, `signingKey: "..."` |
+
+To keep noise down, some literals are skipped:
+
+- **Secret-named literals** that look like something else: shorter than 8 characters, containing
+  whitespace or parentheses (messages, code snippets), header names (`"X-Api-Key"`), configuration
+  paths (`"Jwt:SigningKey"`), or URLs.
+- **Connection strings to the local machine** - server `localhost`, `127.0.0.1`, `::1`, `.`, or
+  `(localdb)`. A credential that only works on the developer's own machine (a local default or a
+  generated template) isn't a leaked secret.
+- Empty values, interpolation holes (`Password={password}`), placeholders (`<password>`, `***`),
+  comparisons (`==`), expression-bodied members (`=>`), and comments.
+
+Development guards don't exempt anything: a literal in source is committed regardless of which
+environment runs it. The finding names each location - never the value.
+
+**Fix:** Rotate the secret, then read it from configuration (`IConfiguration` / `IOptions`) backed by
+`dotnet user-secrets` in development and environment variables or a secret store such as Azure Key
+Vault in production:
+
+```csharp
+var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Value.SigningKey));
+```

@@ -16,6 +16,7 @@ public static class RuleCatalog
         new("Security", "SEC010", "TLS validation", "TLS certificates validated"),
         new("Security", "SEC011", "SQL injection", "No SQL built from runtime values"),
         new("Security", "SEC012", "Deserialization", "No type-trusting deserialization"),
+        new("Security", "SEC013", "Secrets in code", "No hard-coded secrets in code"),
         new("Reliability", "REL001", "Health checks", "Health checks configured"),
         new("Reliability", "REL002", "Exception handling", "Global exception handling"),
         new("Reliability", "REL003", "HTTP resilience", "Outbound HTTP has resilience"),
