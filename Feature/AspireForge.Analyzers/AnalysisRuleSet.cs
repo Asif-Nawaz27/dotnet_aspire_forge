@@ -47,6 +47,7 @@ public static class AnalysisRuleSet
         new PERF002RateLimitingMissing(),
         new PERF003BlockingCallOnAsyncCode(),
         new DEP001UnsupportedTargetFramework(),
+        new DEP003ContainerProblems(),
     ];
 
     public static IReadOnlyList<IAnalysisRule> ApplyConfig(IReadOnlyList<IAnalysisRule> rules, AspireForgeConfig config) =>
