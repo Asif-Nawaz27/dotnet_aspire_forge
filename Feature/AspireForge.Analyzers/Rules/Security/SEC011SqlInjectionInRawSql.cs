@@ -57,7 +57,7 @@ public sealed partial class SEC011SqlInjectionInRawSql : IAnalysisRule
                 var interpolationIsSafe = SafeWithInterpolation().IsMatch(api);
                 var argument = SourceFileHeuristics.ReadCallArguments(code, call.Index + call.Length);
 
-                if (IsUnsafeSql(argument, interpolationIsSafe))
+                if (StringExpressions.IsBuiltFromValues(argument, interpolationIsSafe))
                 {
                     findings.Add((file, SourceFileHeuristics.LineOf(code, call.Index), api));
                 }
@@ -68,7 +68,7 @@ public sealed partial class SEC011SqlInjectionInRawSql : IAnalysisRule
                 var value = code[(assignment.Index + assignment.Length)..];
                 var end = value.IndexOf(';');
 
-                if (IsUnsafeSql(end >= 0 ? value[..end] : value, interpolationIsSafe: false))
+                if (StringExpressions.IsBuiltFromValues(end >= 0 ? value[..end] : value, interpolationIsSafe: false))
                 {
                     findings.Add((file, SourceFileHeuristics.LineOf(code, assignment.Index), "CommandText"));
                 }
@@ -101,123 +101,6 @@ public sealed partial class SEC011SqlInjectionInRawSql : IAnalysisRule
             findings[0].Line);
     }
 
-    private static bool IsUnsafeSql(string arguments, bool interpolationIsSafe)
-    {
-        var text = arguments.TrimStart();
-
-        if (FormatCall().IsMatch(text))
-        {
-            return true;
-        }
-
-        if (text.StartsWith('$') || text.StartsWith("@$", StringComparison.Ordinal))
-        {
-            return !interpolationIsSafe && HasInterpolationHole(text);
-        }
-
-        return IsLiteralConcatenatedWithValue(text);
-    }
-
-    // `{x}` is a hole; `{{` is an escaped brace. For raw strings with N leading '$', holes use N braces.
-    private static bool HasInterpolationHole(string text)
-    {
-        var dollars = text.TakeWhile(c => c is '$' or '@').Count(c => c == '$');
-        var literalEnd = SkipStringLiteral(text, text.TakeWhile(c => c is '$' or '@').Count());
-        var literal = literalEnd > 0 ? text[..literalEnd] : text;
-
-        return dollars >= 2
-            ? literal.Contains(new string('{', dollars), StringComparison.Ordinal)
-            : Regex.IsMatch(literal, @"(?<!\{)\{(?!\{)");
-    }
-
-    // "..." + value  - but not "..." + "..." (constant).
-    private static bool IsLiteralConcatenatedWithValue(string text)
-    {
-        var start = text.StartsWith('@') ? 1 : 0;
-
-        if (start >= text.Length || text[start] != '"')
-        {
-            return false;
-        }
-
-        var end = SkipStringLiteral(text, start);
-
-        while (end > 0)
-        {
-            var rest = text[end..].TrimStart();
-
-            if (!rest.StartsWith('+'))
-            {
-                return false;
-            }
-
-            rest = rest[1..].TrimStart();
-            var next = rest.StartsWith('@') && rest.Length > 1 && rest[1] == '"' ? 1 : 0;
-
-            if (next >= rest.Length || rest[next] != '"')
-            {
-                return true; // concatenated with something that isn't a plain literal
-            }
-
-            var offset = text.Length - rest.Length;
-            end = SkipStringLiteral(text, offset + next);
-        }
-
-        return false;
-    }
-
-    // Given the index of a literal's opening quote (after any $/@ prefix), returns the index just past
-    // its closing quote, or -1. Handles regular ("\"" escapes), verbatim (@"" "" escapes), and raw
-    // ("""...""") literals.
-    private static int SkipStringLiteral(string text, int quoteIndex)
-    {
-        if (quoteIndex >= text.Length || text[quoteIndex] != '"')
-        {
-            return -1;
-        }
-
-        var quotes = 0;
-        while (quoteIndex + quotes < text.Length && text[quoteIndex + quotes] == '"')
-        {
-            quotes++;
-        }
-
-        if (quotes >= 3)
-        {
-            var close = text.IndexOf(new string('"', quotes), quoteIndex + quotes, StringComparison.Ordinal);
-            return close < 0 ? -1 : close + quotes;
-        }
-
-        if (quotes == 2)
-        {
-            return quoteIndex + 2; // empty string ""
-        }
-
-        var verbatim = quoteIndex > 0 && text[..quoteIndex].Contains('@');
-
-        for (var i = quoteIndex + 1; i < text.Length; i++)
-        {
-            if (!verbatim && text[i] == '\\')
-            {
-                i++;
-                continue;
-            }
-
-            if (text[i] == '"')
-            {
-                if (verbatim && i + 1 < text.Length && text[i + 1] == '"')
-                {
-                    i++;
-                    continue;
-                }
-
-                return i + 1;
-            }
-        }
-
-        return -1;
-    }
-
     [GeneratedRegex(@"(?:\.(?<api>FromSqlRaw|ExecuteSqlRawAsync|ExecuteSqlRaw|SqlQueryRaw|FromSql|ExecuteSqlAsync|ExecuteSql|SqlQuery|ExecuteSqlCommandAsync|ExecuteSqlCommand|QueryFirstOrDefaultAsync|QueryFirstOrDefault|QueryFirstAsync|QueryFirst|QuerySingleOrDefaultAsync|QuerySingleOrDefault|QuerySingleAsync|QuerySingle|QueryMultipleAsync|QueryMultiple|QueryAsync|Query|ExecuteScalarAsync|ExecuteScalar|ExecuteReaderAsync|ExecuteReader|ExecuteAsync|Execute)|\bnew\s+(?<api>(?:Sql|Npgsql|MySql|Sqlite|Oracle|Odbc|OleDb)Command))\s*(?:<[^>()]*>)?\s*\(")]
     private static partial Regex RawSqlCall();
 
@@ -229,9 +112,6 @@ public sealed partial class SEC011SqlInjectionInRawSql : IAnalysisRule
 
     [GeneratedRegex(@"\bCommandText\s*=(?!=)\s*")]
     private static partial Regex CommandTextAssignment();
-
-    [GeneratedRegex(@"^(?:string|String)\.Format\s*\(")]
-    private static partial Regex FormatCall();
 
     [GeneratedRegex(@"^\s*using\s+Dapper\s*;", RegexOptions.Multiline)]
     private static partial Regex UsingDapper();

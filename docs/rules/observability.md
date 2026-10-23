@@ -88,3 +88,42 @@ inside comments are ignored, and non-web projects (CLI tools, workers without
 finding reports the file and line of each call.
 
 **Fix:** Inject `ILogger<T>` and call `logger.LogInformation(...)`.
+
+## OBS006 - Log message built from values
+
+**Default severity:** `suggestion`
+
+Flags log messages built from values at the call site - `$"User {id} signed in"`,
+`"User " + id`, or `string.Format(...)` - instead of a message template with named placeholders:
+
+- **Structure is lost.** With `LogInformation("User {UserId} signed in", userId)` the log sink stores
+  `UserId` as a field you can filter and aggregate on. An interpolated message is just a string.
+- **It costs even when nothing is logged.** The string is built before the logger checks whether the
+  level is enabled, allocating on every call.
+- **Grouping breaks.** Every message text is distinct, so log-based alerts and "count by message"
+  queries stop working.
+
+This is the same check as code analysis rule
+[CA2254](https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca2254).
+
+Calls checked - the message is the first argument that's a string expression, so
+`LogError(ex, $"...")` and `Log(LogLevel.Warning, eventId, $"...")` are covered:
+
+| Library | Methods |
+| --- | --- |
+| Microsoft.Extensions.Logging | `LogTrace`, `LogDebug`, `LogInformation`, `LogWarning`, `LogError`, `LogCritical`, `Log`, `BeginScope` |
+| Serilog (files with `using Serilog;`) | `Verbose`, `Debug`, `Information`, `Warning`, `Error`, `Fatal` |
+| NLog (files with `using NLog;`) | `Trace`, `Debug`, `Info`, `Warn`, `Error`, `Fatal` |
+
+Serilog and NLog method names are only checked in files that import those libraries, so look-alikes
+such as `Result.Error($"...")` aren't flagged. Interpolated strings without holes, `{{escaped}}`
+braces, constant concatenation (`"a" + "b"`), a message passed in as a variable, and comments are fine.
+The finding lists each call with its file and line.
+
+**Fix:** Use a message template with named placeholders, and pass the values as arguments:
+
+```csharp
+logger.LogInformation("User {UserId} signed in from {IpAddress}", userId, ip);
+```
+
+For hot paths, the `[LoggerMessage]` source generator avoids the remaining overhead entirely.
