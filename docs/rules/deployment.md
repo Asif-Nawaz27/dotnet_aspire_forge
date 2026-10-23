@@ -27,3 +27,44 @@ contract, not a runtime).
 
 **Fix:** Retarget to a supported release - the current LTS is `net10.0` - and update package
 references to matching versions.
+
+## DEP003 - Container image problems
+
+**Default severity:** `warning` (`suggestion` for the last two checks)
+
+Reviews the Dockerfile that builds this project. The Dockerfile is the nearest one found walking up
+from the project directory to the repository root (the directory containing `.git`), so a
+solution-level Dockerfile is found when you run `doctor` on the Api. Recognised names: `Dockerfile`,
+`*.Dockerfile`, `Dockerfile.*`.
+
+Not having a Dockerfile isn't a finding: plenty of apps deploy without containers, or build images
+with the .NET SDK (`dotnet publish /t:PublishContainer`) instead.
+
+The final stage is everything after the last `FROM`:
+
+| Check | Severity |
+| --- | --- |
+| **Runs as root** - the final stage has no `USER` instruction, or `USER root` / `USER 0`. The .NET runtime images default to root; a compromised process then has full control of the container. Chiseled images (`*-chiseled*`) default to the non-root `app` user and are exempt. | warning |
+| **SDK image in the final stage** - `mcr.microsoft.com/dotnet/sdk` ships compilers and build tools to production: a far larger image and attack surface. | warning |
+| **Unpinned base image** - `:latest` or no tag, so the same Dockerfile builds different images over time. Earlier stage aliases, `scratch`, `${ARG}` images, and digest pins (`@sha256:...`) are fine. | suggestion |
+| **No `.dockerignore`** next to a Dockerfile that copies the whole context (`COPY . .`, `ADD . /app`) - `.git`, `bin/obj`, and local secrets such as `appsettings.Development.json` are sent into the build. | suggestion |
+
+Line continuations (`\`) and comments are handled; each problem is reported with its Dockerfile line,
+most severe first.
+
+**Fix:** Build in an SDK stage, run on the ASP.NET runtime image, and drop root:
+
+```dockerfile
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+COPY . .
+RUN dotnet publish Api/Api.csproj -c Release -o /app
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0
+WORKDIR /app
+COPY --from=build /app .
+USER $APP_UID
+ENTRYPOINT ["dotnet", "Api.dll"]
+```
+
+…with a `.dockerignore` listing at least `**/bin/`, `**/obj/`, and `.git/`.
