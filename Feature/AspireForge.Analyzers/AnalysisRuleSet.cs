@@ -47,6 +47,7 @@ public static class AnalysisRuleSet
         new PERF001ResponseCompressionMissing(),
         new PERF002RateLimitingMissing(),
         new PERF003BlockingCallOnAsyncCode(),
+        new PERF004SynchronousIoAllowed(),
         new DEP001UnsupportedTargetFramework(),
         new DEP003ContainerProblems(),
     ];

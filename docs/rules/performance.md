@@ -37,3 +37,33 @@ property named `Result`, and a rule that fires on those would be noisy enough to
 the ones that don't.
 
 **Fix:** `await` the call instead of blocking on it.
+
+## PERF004 - Synchronous I/O allowed
+
+**Default severity:** `warning` (`suggestion` per request)
+
+ASP.NET Core disallows synchronous reads and writes of request and response bodies by default. Each
+blocking call parks a thread-pool thread while it waits on the network, and under load the pool
+runs dry: requests queue, latency climbs, and the server can stop responding entirely (thread-pool
+starvation). `AllowSynchronousIO = true` turns that protection off.
+
+| Where | Severity |
+| --- | --- |
+| Server-wide - `KestrelServerOptions`, `IISServerOptions`, `TestServer`: `options.AllowSynchronousIO = true` | warning |
+| Per request - `IHttpBodyControlFeature.AllowSynchronousIO = true`, directly or through a variable obtained from `HttpContext.Features` | suggestion |
+
+The per-request form is Microsoft's documented workaround for a library that only does synchronous
+I/O: it limits the damage to the endpoints that set it, but those endpoints still block threads.
+Assignments inside a development-only guard (`if (...IsDevelopment())`, `#if DEBUG`) are allowed;
+`= false`, comparisons, and comments aren't flagged. The finding lists each assignment with its file
+and line, server-wide first.
+
+**Fix:** Use the async APIs - `ReadAsync`, `WriteAsync`, `ReadFromJsonAsync`, `WriteAsJsonAsync`. For a
+library that can only read synchronously, buffer the body asynchronously first and hand it the
+buffered stream:
+
+```csharp
+context.Request.EnableBuffering();
+await context.Request.Body.DrainAsync(context.RequestAborted); // read fully, asynchronously
+context.Request.Body.Position = 0;                             // now safe to read synchronously
+```
