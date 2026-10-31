@@ -42,5 +42,6 @@ public static class RuleCatalog
         new("Performance", "PERF004", "Synchronous I/O", "Synchronous I/O disabled"),
         new("Deployment", "DEP001", ".NET version", "Supported .NET version"),
         new("Deployment", "DEP003", "Container image", "Container image follows good practice"),
+        new("Deployment", "DEP004", "Package versions", "Packages pinned to stable releases"),
     ];
 }

@@ -68,3 +68,35 @@ ENTRYPOINT ["dotnet", "Api.dll"]
 ```
 
 …with a `.dockerignore` listing at least `**/bin/`, `**/obj/`, and `.git/`.
+
+## DEP004 - Prerelease or floating package versions
+
+**Default severity:** `warning` (`suggestion` for floating versions)
+
+Flags package versions that aren't stable releases:
+
+| Version | Example | Severity |
+| --- | --- | --- |
+| **Prerelease** - any SemVer prerelease label | `10.0.0-preview.7`, `9.0.0-rc.2`, `1.0.0-beta.12`, `[1.0.0-beta, )` | warning |
+| **Floating** - resolves to whatever is newest at restore time | `10.*`, `*`, `10.0.0-*` | suggestion |
+
+A prerelease carries no support commitment: APIs can still change, bugs are expected, and security
+fixes may only land in the next preview. A floating version means two builds of the same commit can
+ship different code.
+
+Projects checked: the analysed project **and every project it references**, transitively - their
+packages ship in the same deployment. Versions are read from `<PackageReference Version="...">`
+(attribute or child element), `VersionOverride`, and central package management (`<PackageVersion>`
+in the nearest `Directory.Packages.props`). A central version used by several projects is reported
+once, pointing at the props file.
+
+Skipped:
+
+- **Build-only packages** - `PrivateAssets="all"` (analyzers, `Microsoft.EntityFrameworkCore.Design`):
+  they never reach production.
+- **Versions built from MSBuild properties** (`$(EfCoreVersion)`): they can't be evaluated without
+  MSBuild.
+
+**Fix:** Pin every shipped package to an exact stable version. If a package only exists as a
+prerelease (some OpenTelemetry instrumentation packages, for example), weigh that risk explicitly -
+and disable the rule in `.aspireforge/config.json` if you accept it (see the [rule engine](../architecture/rule-engine.md)).

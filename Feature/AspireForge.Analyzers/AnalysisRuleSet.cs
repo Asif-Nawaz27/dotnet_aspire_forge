@@ -50,6 +50,7 @@ public static class AnalysisRuleSet
         new PERF004SynchronousIoAllowed(),
         new DEP001UnsupportedTargetFramework(),
         new DEP003ContainerProblems(),
+        new DEP004PrereleasePackages(),
     ];
 
     public static IReadOnlyList<IAnalysisRule> ApplyConfig(IReadOnlyList<IAnalysisRule> rules, AspireForgeConfig config) =>

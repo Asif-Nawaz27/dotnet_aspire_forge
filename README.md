@@ -163,6 +163,7 @@ Full command reference: [`new`](docs/commands/new.md) · [`add`](docs/commands/a
 | PERF004 | Performance | `AllowSynchronousIO` not enabled | warning |
 | DEP001 | Deployment | Target framework is still supported by Microsoft | error |
 | DEP003 | Deployment | Dockerfile runs as non-root, not on the SDK image, with pinned base images | warning |
+| DEP004 | Deployment | Packages pinned to stable releases (no prerelease or floating versions) | warning |
 
 Details and fixes for each: [security](docs/rules/security.md) ·
 [reliability](docs/rules/reliability.md) · [observability](docs/rules/observability.md) ·
