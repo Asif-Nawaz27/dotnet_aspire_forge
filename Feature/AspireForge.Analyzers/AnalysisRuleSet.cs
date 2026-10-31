@@ -5,6 +5,7 @@ using AspireForge.Analyzers.Rules.Performance;
 using AspireForge.Analyzers.Rules.Reliability;
 using AspireForge.Analyzers.Rules.Security;
 using AspireForge.Analyzers.Rules.Testing;
+using AspireForge.Analyzers.Vulnerabilities;
 using AspireForge.Core.Analysis;
 using AspireForge.Core.Configuration;
 
@@ -12,7 +13,14 @@ namespace AspireForge.Analyzers;
 
 public static class AnalysisRuleSet
 {
-    public static IReadOnlyList<IAnalysisRule> CreateDefault() =>
+    // DEP002 (vulnerable packages) runs the dotnet CLI and queries NuGet over the network, so it's only
+    // included when asked for - `aspireforge doctor --vulnerable`.
+    public static IReadOnlyList<IAnalysisRule> CreateDefault(bool includeVulnerabilityScan = false) =>
+        includeVulnerabilityScan
+            ? [.. StaticRules(), new DEP002VulnerablePackages(new DotnetListPackageScanner())]
+            : StaticRules();
+
+    private static IReadOnlyList<IAnalysisRule> StaticRules() =>
     [
         new SEC001AuthenticationNotConfigured(),
         new SEC002CorsPolicyAllowsUnrestrictedOrigins(),

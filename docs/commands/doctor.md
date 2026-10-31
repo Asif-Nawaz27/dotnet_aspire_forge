@@ -6,7 +6,7 @@ what's missing.
 ## Usage
 
 ```bash
-aspireforge doctor [<path>] [--fail-on <severity>] [--format <format>]
+aspireforge doctor [<path>] [--fail-on <severity>] [--format <format>] [--vulnerable]
 ```
 
 | Argument/Option | Description | Default |
@@ -14,6 +14,8 @@ aspireforge doctor [<path>] [--fail-on <severity>] [--format <format>]
 | `<path>` | A project file, or a directory containing exactly one. | current directory |
 | `--fail-on` | The minimum issue severity that causes a non-zero exit code: `info`, `suggestion`, `warning`, `error`, or `critical`. | `error` |
 | `--format` | Output format: `text`, `json`, or `sarif`. | `text` |
+| `--vulnerable` | Also scan packages, including transitive ones, for known security vulnerabilities ([DEP002](../rules/deployment.md#dep002---vulnerable-packages)). Runs `dotnet list package --vulnerable`, so it's slower and needs network access. | off |
+| `--vulnerable` | Also scan packages, including transitive ones, for known security vulnerabilities ([DEP002](../rules/deployment.md#dep002---vulnerable-packages)). Runs `dotnet list package --vulnerable`, so it is slower and needs network access. | off |
 
 ## Text output (default)
 

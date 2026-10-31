@@ -18,6 +18,7 @@ public class DoctorCommand(ConsoleRenderer renderer)
         string path,
         Severity failOn = Severity.Error,
         OutputFormat format = OutputFormat.Text,
+        bool scanVulnerablePackages = false,
         CancellationToken cancellationToken = default)
     {
         ProjectContext context;
@@ -33,7 +34,7 @@ public class DoctorCommand(ConsoleRenderer renderer)
         }
 
         var config = ConfigLoader.Load(context.RootDirectory);
-        var rules = AnalysisRuleSet.ApplyConfig(AnalysisRuleSet.CreateDefault(), config);
+        var rules = AnalysisRuleSet.ApplyConfig(AnalysisRuleSet.CreateDefault(scanVulnerablePackages), config);
         var analyzer = new ProjectAnalyzer(rules);
         var rawResult = await analyzer.AnalyzeAsync(path, cancellationToken);
         var result = AnalysisRuleSet.ApplySeverityOverrides(rawResult, config);
