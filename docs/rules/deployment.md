@@ -28,6 +28,38 @@ contract, not a runtime).
 **Fix:** Retarget to a supported release - the current LTS is `net10.0` - and update package
 references to matching versions.
 
+## DEP002 - Vulnerable packages
+
+**Default severity:** `error` (depends on the advisory) · **opt-in:** `aspireforge doctor --vulnerable`
+
+Flags packages - direct **and transitive**, including those pulled in through project references -
+with a published security advisory. It runs:
+
+```bash
+dotnet list <project> package --vulnerable --include-transitive --format json
+```
+
+which checks every resolved package against the vulnerability data of your configured NuGet sources
+(nuget.org uses the GitHub Advisory Database). Because that runs the dotnet CLI, may restore the
+project, and needs network access, DEP002 only runs when you pass `--vulnerable`. Without the flag
+it's neither run nor shown, and doesn't count toward the score.
+
+| Advisory severity | Finding |
+| --- | --- |
+| Critical, High | error |
+| Moderate | warning |
+| Low | suggestion |
+
+The finding lists each package with its resolved version, advisory severity, whether it's transitive,
+and the advisory URL - most severe first. If the scan itself can't run (no network, a restore
+failure, the dotnet CLI unavailable), that's reported as an `info` finding - "Vulnerability scan
+couldn't run" - rather than silently passing.
+
+**Fix:** Upgrade each package to a patched version. For a transitive package, upgrade the direct
+dependency that brings it in, or add a direct reference to the patched version. In CI, run
+`aspireforge doctor --vulnerable` so a newly published advisory fails the build (errors exit non-zero
+by default; see `--fail-on`).
+
 ## DEP003 - Container image problems
 
 **Default severity:** `warning` (`suggestion` for the last two checks)

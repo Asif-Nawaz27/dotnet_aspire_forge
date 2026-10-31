@@ -30,6 +30,18 @@ public class DoctorCommandTests : IDisposable
         Assert.Contains("Authentication not configured", output);
     }
 
+    // DEP002 is opt-in: without --vulnerable it's neither run nor shown, so it can't affect the score.
+    [Fact]
+    public async Task RunAsync_DoesNotShowTheVulnerabilityCheck_UnlessRequested()
+    {
+        var writer = new StringWriter();
+        var command = new DoctorCommand(new ConsoleRenderer(writer));
+
+        await command.RunAsync(_projectDirectory);
+
+        Assert.DoesNotContain("vulnerable", writer.ToString(), StringComparison.OrdinalIgnoreCase);
+    }
+
     [Fact]
     public async Task RunAsync_ReturnsSuccess_WhenNoIssueMeetsTheDefaultErrorThreshold()
     {

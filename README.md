@@ -162,6 +162,7 @@ Full command reference: [`new`](docs/commands/new.md) · [`add`](docs/commands/a
 | PERF003 | Performance | No blocking calls (`.Wait()`, `.GetAwaiter().GetResult()`) on async code | warning |
 | PERF004 | Performance | `AllowSynchronousIO` not enabled | warning |
 | DEP001 | Deployment | Target framework is still supported by Microsoft | error |
+| DEP002 | Deployment | No packages with known vulnerabilities (opt-in: `doctor --vulnerable`) | error |
 | DEP003 | Deployment | Dockerfile runs as non-root, not on the SDK image, with pinned base images | warning |
 | DEP004 | Deployment | Packages pinned to stable releases (no prerelease or floating versions) | warning |
 
