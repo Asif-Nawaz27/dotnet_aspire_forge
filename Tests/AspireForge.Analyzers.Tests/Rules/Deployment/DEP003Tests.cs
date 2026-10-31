@@ -54,7 +54,9 @@ public class DEP003Tests : IDisposable
     [Fact]
     public async Task Fires_WhenTheFinalStageHasNoUser_AtTheFinalFromLine()
     {
-        Write("Dockerfile", GoodDockerfile.Replace("USER $APP_UID\n", string.Empty));
+        // Blank out the line rather than matching its line ending, which depends on how git checked
+        // this file out (autocrlf).
+        Write("Dockerfile", GoodDockerfile.Replace("USER $APP_UID", string.Empty));
         Write(".dockerignore", "**/bin/");
 
         var issue = await Evaluate();

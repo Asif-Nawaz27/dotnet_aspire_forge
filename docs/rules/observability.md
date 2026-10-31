@@ -127,3 +127,36 @@ logger.LogInformation("User {UserId} signed in from {IpAddress}", userId, ip);
 ```
 
 For hot paths, the `[LoggerMessage]` source generator avoids the remaining overhead entirely.
+
+## OBS007 - Verbose logging by default
+
+**Default severity:** `warning` (`suggestion` for a single category)
+
+Flags Debug/Trace minimum log levels (Serilog: Debug/Verbose) in configuration that reaches
+production. Verbose logging multiplies log volume - and with it ingestion cost and noise - and Debug
+messages routinely include request bodies, query parameters, and other personal data that never
+appear at Information.
+
+Settings checked, in `appsettings*.json` other than `appsettings.Development.json` (read with the
+same configuration reader as [SEC004](security.md#sec004---secrets-in-configuration-files)):
+
+| Setting | Severity when Debug/Trace |
+| --- | --- |
+| `Logging:LogLevel:Default` | warning |
+| `Logging:<Provider>:LogLevel:Default` (e.g. `Logging:Console:LogLevel:Default`) | warning |
+| `Serilog:MinimumLevel` / `Serilog:MinimumLevel:Default` | warning |
+| any other category - `Logging:LogLevel:Microsoft.EntityFrameworkCore`, `Serilog:MinimumLevel:Override:Microsoft`, ... | suggestion |
+
+A single category turned up is sometimes deliberate, so it's only a suggestion.
+
+Configuration layers are respected: `appsettings.{Environment}.json` overrides `appsettings.json`, so
+a verbose value in the base file isn't reported when `appsettings.Production.json` sets the same key
+to a quieter level. The finding lists each setting with its file and line.
+
+**Fix:** Keep `Information` (or `Warning`) as the default for deployed environments, put verbose
+levels in `appsettings.Development.json`, and turn them on temporarily in production with an
+environment variable when you need them:
+
+```bash
+Logging__LogLevel__MyApp.Payments=Debug
+```
