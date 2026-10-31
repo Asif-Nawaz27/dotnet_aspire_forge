@@ -160,6 +160,7 @@ Full command reference: [`new`](docs/commands/new.md) · [`add`](docs/commands/a
 | PERF001 | Performance | Response compression configured | suggestion |
 | PERF002 | Performance | Rate limiting configured | suggestion |
 | PERF003 | Performance | No blocking calls (`.Wait()`, `.GetAwaiter().GetResult()`) on async code | warning |
+| PERF004 | Performance | `AllowSynchronousIO` not enabled | warning |
 | DEP001 | Deployment | Target framework is still supported by Microsoft | error |
 | DEP003 | Deployment | Dockerfile runs as non-root, not on the SDK image, with pinned base images | warning |
 

@@ -39,6 +39,7 @@ public static class RuleCatalog
         new("Performance", "PERF001", "Response compression", "Response compression configured"),
         new("Performance", "PERF002", "Rate limiting", "Rate limiting configured"),
         new("Performance", "PERF003", "Blocking calls", "No blocking calls on async code"),
+        new("Performance", "PERF004", "Synchronous I/O", "Synchronous I/O disabled"),
         new("Deployment", "DEP001", ".NET version", "Supported .NET version"),
         new("Deployment", "DEP003", "Container image", "Container image follows good practice"),
     ];
