@@ -15,11 +15,37 @@ Fires when the project looks like an ASP.NET Core web app (its source contains
 
 ## SEC002 - CORS policy allows unrestricted origins
 
-**Default severity:** `error`
+**Default severity:** `error` (`warning` for substring matching)
 
-Fires when the source contains a call to `AllowAnyOrigin`, which permits requests from any origin.
+Flags CORS policies that accept requests from origins nobody chose:
 
-**Fix:** Restrict the CORS policy to a known allow-list of origins.
+| Pattern | Severity |
+| --- | --- |
+| `AllowAnyOrigin()` | error |
+| `WithOrigins("*")` (alone or in a list) | error |
+| `SetIsOriginAllowed(...)` with a predicate that always returns `true` - `_ => true`, `o => { return true; }`, `delegate { return true; }` | error |
+| `SetIsOriginAllowed(...)` matching by substring - `Contains("example.com")`, or `EndsWith("example.com")` without a leading dot | warning |
+
+The always-true predicate deserves a note. ASP.NET Core refuses to start with `AllowAnyOrigin()`
+together with `AllowCredentials()`, precisely because that combination lets any website send
+requests carrying a visitor's cookies and read the responses. `SetIsOriginAllowed(_ => true)` is the
+well-known way around that refusal - so when `AllowCredentials()` is also present, the finding says
+so explicitly. Substring matching is weaker than it looks: `Contains("example.com")` also accepts
+`evil-example.com` and `example.com.attacker.net`.
+
+Not flagged: explicit allow-lists (`WithOrigins("https://app.example.com")`,
+`WithOrigins(settings.AllowedOrigins)`), exact comparisons, `EndsWith(".example.com")` with the leading
+dot, membership checks such as `allowed.Contains(origin)`, a predicate passed as a method group
+(`SetIsOriginAllowed(IsTrustedOrigin)`), `SetIsOriginAllowedToAllowWildcardSubdomains()`, comments,
+and permissive policies inside a development-only guard (`if (env.IsDevelopment())`, `#if DEBUG`).
+The finding lists each pattern with its file and line, errors first.
+
+**Fix:** Restrict the policy to an explicit allow-list, read from configuration per environment:
+
+```csharp
+policy.WithOrigins(builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [])
+      .AllowCredentials();
+```
 
 ## SEC003 - HTTPS redirection missing
 
