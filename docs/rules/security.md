@@ -89,6 +89,49 @@ expiry.
 options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
 ```
 
+## SEC007 - Development features enabled in production
+
+**Default severity:** `error` (`warning` for API documentation)
+
+Flags middleware meant for a developer's machine, registered where it also runs in production:
+
+| Call | What it exposes | Severity |
+| --- | --- | --- |
+| `UseDeveloperExceptionPage` | every unhandled exception returns the stack trace, source snippets, headers, and cookies to whoever sent the request | error |
+| `UseMigrationsEndPoint` / `UseDatabaseErrorPage` | EF Core's development endpoint, which can apply pending migrations to the database over HTTP | error |
+| `MapOpenApi`, `UseSwagger`, `UseSwaggerUI`, `MapScalarApiReference`, `UseReDoc`, NSwag's `UseOpenApi` / `UseSwaggerUi` | a map (or interactive console) of every endpoint and model | warning |
+
+API documentation is sometimes published deliberately for a public API, so it's a warning rather
+than an error.
+
+A call is fine inside:
+
+- a development guard - `if (app.Environment.IsDevelopment())` (braced or braceless, at any nesting
+  depth), the **`else`** of `if (!app.Environment.IsDevelopment())` (the ASP.NET Core template
+  shape), or `#if DEBUG`;
+- a **non-production** guard - `if (!app.Environment.IsProduction())`, or the `else` of
+  `if (app.Environment.IsProduction())` - because this rule's concern is production specifically,
+  and keeping API docs on in staging is a common, deliberate choice.
+
+The `else` of a *positive* development check, `IsProduction()` blocks, and calls after a closed guard
+block are flagged; service registrations (`AddOpenApi`, `AddSwaggerGen`) and comments aren't. Only
+checked in web projects. The finding lists each call with its file and line, errors first.
+
+**Fix:**
+
+```csharp
+if (app.Environment.IsDevelopment())
+{
+    app.UseDeveloperExceptionPage();
+    app.MapOpenApi();
+}
+else
+{
+    app.UseExceptionHandler();
+    app.UseHsts();
+}
+```
+
 ## SEC008 - Authorization not enforced
 
 **Default severity:** `warning`

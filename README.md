@@ -132,6 +132,7 @@ Full command reference: [`new`](docs/commands/new.md) · [`add`](docs/commands/a
 | SEC003 | Security | HTTPS redirection configured | warning |
 | SEC004 | Security | No literal secrets in `appsettings*.json` | error |
 | SEC005 | Security | JWT validation checks not switched off (lifetime, signature, issuer, audience, HTTPS metadata, clock skew) | error |
+| SEC007 | Security | Developer exception page, EF migrations endpoint, and API docs limited to development | error |
 | SEC008 | Security | Authorization actually required somewhere when authentication is configured | warning |
 | SEC009 | Security | Middleware order (authentication, authorization, CORS, routing, exception handler) | error |
 | SEC010 | Security | TLS certificate validation not switched off (always-true callbacks, `TrustServerCertificate=true`) | error |

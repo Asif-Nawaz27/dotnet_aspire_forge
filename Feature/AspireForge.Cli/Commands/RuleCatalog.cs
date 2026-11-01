@@ -11,6 +11,7 @@ public static class RuleCatalog
         new("Security", "SEC003", "HTTPS", "HTTPS configured"),
         new("Security", "SEC004", "Secrets in config", "No secrets in configuration files"),
         new("Security", "SEC005", "JWT validation", "JWT validation not weakened"),
+        new("Security", "SEC007", "Development features", "Development features limited to development"),
         new("Security", "SEC008", "Authorization", "Authorization enforced on endpoints"),
         new("Security", "SEC009", "Middleware order", "Middleware in a working order"),
         new("Security", "SEC010", "TLS validation", "TLS certificates validated"),
