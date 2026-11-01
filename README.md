@@ -128,7 +128,7 @@ Full command reference: [`new`](docs/commands/new.md) · [`add`](docs/commands/a
 | ID | Category | Checks for | Default severity |
 |---|---|---|---|
 | SEC001 | Security | Authentication configured | warning |
-| SEC002 | Security | CORS doesn't allow any origin | error |
+| SEC002 | Security | CORS doesn't allow any origin (`AllowAnyOrigin`, `WithOrigins("*")`, always-true `SetIsOriginAllowed`) | error |
 | SEC003 | Security | HTTPS redirection configured | warning |
 | SEC004 | Security | No literal secrets in `appsettings*.json` | error |
 | SEC005 | Security | JWT validation checks not switched off (lifetime, signature, issuer, audience, HTTPS metadata, clock skew) | error |
