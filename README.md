@@ -156,7 +156,7 @@ Full command reference: [`new`](docs/commands/new.md) · [`add`](docs/commands/a
 | OBS007 | Observability | No Debug/Trace default log level in configuration that reaches production | warning |
 | TEST001 | Testing | A matching unit test project exists | warning |
 | TEST002 | Testing | An integration test project exists | info |
-| ARCH001 | Architecture | Api doesn't reference *and use* persistence packages directly | warning |
+| ARCH001 | Architecture | Api code doesn't use the database directly - its own persistence packages, or the `DbContext` via a project reference | warning |
 | ARCH002 | Architecture | Project references point inward (Presentation → Infrastructure → Application → Domain) | warning |
 | PERF001 | Performance | Response compression configured | suggestion |
 | PERF002 | Performance | Rate limiting configured | suggestion |

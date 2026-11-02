@@ -18,8 +18,29 @@ postgres` adds a direct `Microsoft.EntityFrameworkCore` reference to `Api` as we
 (this version-pin case, or a leftover reference after a refactor) no longer trips this rule - only
 `Api` actually calling into EF Core, Dapper, or similar does.
 
+### Without a package reference
+
+The more common violation needs no package reference at all. In the clean-architecture layout, `Api`
+references `Infrastructure`, so EF Core and the `DbContext` reach it **through that project
+reference** - and a controller can inject `AppDbContext` directly. ARCH001 also fires when the Api
+project's own code does any of:
+
+- declares a `...DbContext` constructor parameter, field, property, or endpoint lambda parameter
+  (`app.MapGet("/orders", (AppDbContext db) => ...)`)
+- uses `IDbContextFactory<...>` or `DbSet<...>`
+- resolves a `...DbContext` with `GetRequiredService` / `GetService` outside `Program.cs`/`Startup.cs`
+- defines a class deriving from `DbContext` (including `IdentityDbContext<...>`)
+
+The composition root is allowed: `AddDbContext<...>()` and other registrations, and resolving the
+context in `Program.cs`/`Startup.cs` for startup work such as applying migrations. Only the Api
+project's own files are checked - the `DbContext` used inside `Infrastructure` is exactly where it
+belongs. `DbContextOptions<...>`, `typeof(...)`, comments, and strings aren't flagged. The finding
+lists each usage with its file and line.
+
 **Fix:** Move the persistence package reference to your `Infrastructure` project and access it
 through an abstraction (a repository interface, for example) instead of referencing it from `Api`.
+For the project-reference case, inject an Application service (or repository interface) into the
+controller instead of the `DbContext`, and keep the `DbContext` inside `Infrastructure`.
 
 ## ARCH002 - Layer dependency reversed
 
