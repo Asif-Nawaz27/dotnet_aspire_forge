@@ -27,6 +27,7 @@ public static class AnalysisRuleSet
         new SEC003HttpsRedirectionMissing(),
         new SEC004SecretsInConfiguration(),
         new SEC005WeakJwtValidation(),
+        new SEC006HstsMissing(),
         new SEC007DevelopmentFeaturesInProduction(),
         new SEC008AuthorizationNotEnforced(),
         new SEC009MiddlewareOrder(),
