@@ -1,5 +1,3 @@
-using System.Xml;
-using System.Xml.Linq;
 using AspireForge.Core.Analysis;
 
 namespace AspireForge.Analyzers.Rules.Architecture;
@@ -11,7 +9,8 @@ namespace AspireForge.Analyzers.Rules.Architecture;
 // to prevent.
 //
 // Walks the project-reference graph from the analysed project (so running `doctor` on the Api checks
-// every layer it pulls in) and classifies each project by the last segment of its name:
+// every layer it pulls in) and classifies each project by the last segment of its name
+// (see ProjectGraph.Classify):
 //   Domain                       ...Domain
 //   Application                  ...Application
 //   Infrastructure               ...Infrastructure, ...Persistence
@@ -21,14 +20,6 @@ namespace AspireForge.Analyzers.Rules.Architecture;
 public sealed class ARCH002LayerDependencyReversed : IAnalysisRule
 {
     private const int MaxViolationsInDescription = 4;
-
-    private enum Layer
-    {
-        Domain,
-        Application,
-        Infrastructure,
-        Presentation,
-    }
 
     public string Id => "ARCH002";
 
@@ -41,37 +32,18 @@ public sealed class ARCH002LayerDependencyReversed : IAnalysisRule
         CancellationToken cancellationToken = default)
     {
         var violations = new List<Violation>();
-        var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var pending = new Queue<string>([Path.GetFullPath(context.ProjectFile)]);
 
-        while (pending.TryDequeue(out var projectFile))
+        foreach (var project in ProjectGraph.Walk(context.ProjectFile, cancellationToken))
         {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            if (!visited.Add(projectFile) || LoadProject(projectFile) is not { } document)
+            foreach (var reference in ProjectGraph.Elements(project.Document, "ProjectReference"))
             {
-                continue;
-            }
-
-            var fromName = Path.GetFileNameWithoutExtension(projectFile);
-            var fromLayer = Classify(fromName);
-            var directory = Path.GetDirectoryName(projectFile)!;
-
-            foreach (var reference in ProjectReferences(document))
-            {
-                var include = reference.Attribute("Include")!.Value;
-                var referencedFile = Path.GetFullPath(Path.Combine(directory, include.Replace('\\', Path.DirectorySeparatorChar)));
-                var toName = Path.GetFileNameWithoutExtension(referencedFile);
-                var toLayer = Classify(toName);
+                var toName = Path.GetFileNameWithoutExtension(ProjectGraph.ResolveReference(project.File, reference));
 
                 // Inward means a lower layer; pointing at a higher one reverses the dependency.
-                if (fromLayer is { } from && toLayer is { } to && to > from)
+                if (project.Layer is { } from && ProjectGraph.Classify(toName) is { } to && to > from)
                 {
-                    var line = ((IXmlLineInfo)reference).HasLineInfo() ? ((IXmlLineInfo)reference).LineNumber : (int?)null;
-                    violations.Add(new Violation(projectFile, line, fromName, from, toName, to));
+                    violations.Add(new Violation(project.File, ProjectGraph.LineOf(reference), project.Name, from, toName, to));
                 }
-
-                pending.Enqueue(referencedFile);
             }
         }
 
@@ -96,39 +68,7 @@ public sealed class ARCH002LayerDependencyReversed : IAnalysisRule
             violations[0].Line));
     }
 
-    private static Layer? Classify(string projectName)
-    {
-        var lastSegment = projectName[(projectName.LastIndexOf('.') + 1)..];
-
-        return lastSegment.ToLowerInvariant() switch
-        {
-            "domain" => Layer.Domain,
-            "application" => Layer.Application,
-            "infrastructure" or "persistence" => Layer.Infrastructure,
-            "api" or "webapi" or "web" => Layer.Presentation,
-            _ => null,
-        };
-    }
-
-    private static XDocument? LoadProject(string projectFile)
-    {
-        try
-        {
-            return File.Exists(projectFile) ? XDocument.Load(projectFile, LoadOptions.SetLineInfo) : null;
-        }
-        catch (XmlException)
-        {
-            return null;
-        }
-    }
-
-    // Matched by local name so projects using the legacy MSBuild XML namespace are read too.
-    private static IEnumerable<XElement> ProjectReferences(XDocument document) =>
-        document.Descendants()
-            .Where(element => element.Name.LocalName == "ProjectReference"
-                && !string.IsNullOrWhiteSpace(element.Attribute("Include")?.Value));
-
-    private sealed record Violation(string ProjectFile, int? Line, string From, Layer FromLayer, string To, Layer ToLayer)
+    private sealed record Violation(string ProjectFile, int? Line, string From, ProjectLayer FromLayer, string To, ProjectLayer ToLayer)
     {
         public string Describe() =>
             $"{From} ({FromLayer}) references {To} ({ToLayer}) at {Path.GetFileName(ProjectFile)}{(Line is { } line ? $":{line}" : string.Empty)}";

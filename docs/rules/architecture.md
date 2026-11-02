@@ -77,3 +77,35 @@ handled without errors.
 **Fix:** Move the code the inner layer needs into that layer - or define an interface in the inner
 layer (for example `IOrderRepository` in `Application`) and implement it in the outer one
 (`Infrastructure`), wiring the two together in the Api's composition root.
+
+## ARCH003 - Inner layer depends on infrastructure framework
+
+**Default severity:** `warning`
+
+[ARCH002](#arch002---layer-dependency-reversed)'s counterpart for packages. A `<PackageReference>`
+from `Domain` to EF Core, or from `Application` to Npgsql or ASP.NET Core, is the same layering
+violation as a reversed project reference - it ties business logic to a database, web host, or cloud
+SDK - but ARCH002 only sees project references.
+
+ARCH003 walks the same project-reference graph from the analysed project, with the same layer naming
+as ARCH002, and checks each `Domain` and `Application` project:
+
+| Dependency | Domain | Application |
+| --- | --- | --- |
+| EF Core itself - `Microsoft.EntityFrameworkCore`, `.Relational`, `.Abstractions` | flagged | allowed |
+| EF Core providers and tooling - `.SqlServer`, `.Sqlite`, `.Cosmos`, `.InMemory`, `.Design`, `.Tools`, `Npgsql.EntityFrameworkCore.PostgreSQL`, `Pomelo.*` | flagged | flagged |
+| Database drivers - `Npgsql`, `Microsoft.Data.SqlClient`, `MySqlConnector`, `Oracle.*`, `MongoDB.*`, `Dapper`, `StackExchange.Redis` | flagged | flagged |
+| ASP.NET Core - `Microsoft.AspNetCore.*` packages, or `<FrameworkReference Include="Microsoft.AspNetCore.App" />` | flagged | flagged |
+| HTTP clients - `Microsoft.Extensions.Http`, `Refit`, `RestSharp` | flagged | flagged |
+| Messaging and cloud SDKs - `RabbitMQ.*`, `MassTransit`, `Confluent.Kafka`, `Azure.Messaging.*`, `Azure.Storage.*`, `Azure.Data.*`, `AWSSDK.*`, `Google.Cloud.*` | flagged | flagged |
+
+Plain EF Core is allowed in `Application` because many templates deliberately expose `DbSet<T>` from
+an Application interface (`IApplicationDbContext`); the *provider* - which decides the database - is
+still flagged there. `Microsoft.Extensions.*` abstractions (logging, options, DI, caching) are fine in
+both layers, and build-only packages (`PrivateAssets="all"` - analyzers, source generators) are
+skipped. Projects outside these two layers (Infrastructure, Api, `ServiceDefaults`, `.Core`, ...) are
+never checked. The finding lists each reference with its `.csproj` file and line.
+
+**Fix:** Move the code that needs the package into `Infrastructure` (or the Api), behind an interface
+declared in `Application` - for example an `IEmailSender` in Application, implemented with the cloud
+SDK in Infrastructure.

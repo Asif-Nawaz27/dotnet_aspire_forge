@@ -53,6 +53,7 @@ public static class AnalysisRuleSet
         new TEST002NoIntegrationTestsDetected(),
         new ARCH001ApiDirectlyAccessesPersistenceLayer(),
         new ARCH002LayerDependencyReversed(),
+        new ARCH003InnerLayerFrameworkDependency(),
         new PERF001ResponseCompressionMissing(),
         new PERF002RateLimitingMissing(),
         new PERF003BlockingCallOnAsyncCode(),

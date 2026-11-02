@@ -158,6 +158,7 @@ Full command reference: [`new`](docs/commands/new.md) · [`add`](docs/commands/a
 | TEST002 | Testing | An integration test project exists | info |
 | ARCH001 | Architecture | Api code doesn't use the database directly - its own persistence packages, or the `DbContext` via a project reference | warning |
 | ARCH002 | Architecture | Project references point inward (Presentation → Infrastructure → Application → Domain) | warning |
+| ARCH003 | Architecture | Domain and Application don't reference infrastructure framework packages (EF Core providers, ASP.NET Core, cloud SDKs) | warning |
 | PERF001 | Performance | Response compression configured | suggestion |
 | PERF002 | Performance | Rate limiting configured | suggestion |
 | PERF003 | Performance | No blocking calls (`.Wait()`, `.GetAwaiter().GetResult()`) on async code | warning |
