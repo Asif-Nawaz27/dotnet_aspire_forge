@@ -115,6 +115,45 @@ expiry.
 options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
 ```
 
+## SEC006 - HSTS missing
+
+**Default severity:** `warning`
+
+HTTPS redirection ([SEC003](#sec003---https-redirection-missing)) upgrades a request *after* it has
+already been sent over plain HTTP - and that first request is the one an attacker on the network
+(public Wi-Fi, a compromised router) can intercept or rewrite: stripping the redirect, stealing
+cookies, or serving a fake page. HSTS (`Strict-Transport-Security`) tells the browser to go straight
+to HTTPS on every later visit, closing that window. `UseHsts()` is what sends the header.
+
+Fires for web projects when:
+
+- `UseHsts()` is never called, or
+- every call is inside a development-only guard (`if (app.Environment.IsDevelopment())`,
+  `#if DEBUG`) - the header is then sent only where it doesn't matter, and never in production.
+
+The ASP.NET Core template shapes pass: `UseHsts()` in the `else` of
+`if (app.Environment.IsDevelopment())`, or inside `if (!app.Environment.IsDevelopment())`. A
+`UseHsts()` that's commented out, or only `AddHsts(...)` configuration without the middleware, still
+fires.
+
+If TLS is terminated by a reverse proxy or CDN that already sends `Strict-Transport-Security`, the
+header is covered there - disable this rule in `.aspireforge/config.json` for that project.
+
+**Fix:**
+
+```csharp
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();
+}
+else
+{
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+```
+
 ## SEC007 - Development features enabled in production
 
 **Default severity:** `error` (`warning` for API documentation)
