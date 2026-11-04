@@ -64,7 +64,18 @@ Suggestions: 4
 Passed:      30
 --------------------------------
 
-Production Readiness: 8/10
+Production Readiness: 6/10 (64/100)
+
+  Security        90/100   -10 (2 warnings)
+  Reliability     90/100   -10 (2 warnings)
+  Observability   98/100   -2 (2 info)
+  Testing         95/100   -5 (1 warning)
+  Architecture   100/100
+  Performance     96/100   -4 (2 suggestions)
+  Deployment      95/100   -5 (1 warning)
+
+  Score: 100 minus 30 per critical, 15 per error, 5 per warning, 2 per suggestion, 1 per info;
+  any error caps it at 60, any critical at 30.
 
 Next steps
   aspireforge add authentication   resolves SEC001
@@ -86,11 +97,36 @@ Next steps
    | `Fix` | the single command that resolves it - `aspireforge fix <rule>` when there's an automatic fix, or `aspireforge add <feature>` when adding a feature satisfies the rule. Omitted when the fix is a code change |
    | `Docs` | the rule's section in these docs |
 
-3. **Totals and score.**
+3. **Totals and score** - see [Production readiness score](#production-readiness-score) below.
 4. **Next steps** - every one-command remedy, grouped by command, plus how many findings need a code
    change.
 
 Pass `--summary` to skip the findings blocks when you only want the checklist and score.
+
+## Production readiness score
+
+The score starts at 100 and loses points for each finding, weighted by severity:
+
+| Severity | Penalty |
+| --- | --- |
+| critical | 30 |
+| error | 15 |
+| warning | 5 |
+| suggestion | 2 |
+| info | 1 |
+
+Two caps apply on top: **any error limits the score to 60, any critical to 30.** A project with an
+open error isn't production-ready, however clean the rest is - and the score line says when a cap
+applied (`6/10 (60/100) - capped at 60 by 1 error`).
+
+The `/10` figure is the score divided by 10 and **rounded down**, so `10/10` means there is nothing
+left to fix - even one info finding gives `9/10`. Below the score, the same calculation per category
+shows where the points went.
+
+The score depends only on the findings, not on how many rules passed, so adding rules to AspireForge
+can't raise it - ten warnings always cost 50 points. Severity overrides in `.aspireforge/config.json`
+are applied first, so a rule you've downgraded costs what you set it to, and a disabled rule costs
+nothing.
 
 ## JSON output
 

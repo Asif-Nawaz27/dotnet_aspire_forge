@@ -83,7 +83,11 @@ Security
   Docs   https://github.com/Asif-Nawaz27/dotnet_aspire_forge/blob/main/docs/rules/security.md#sec001---authentication-not-configured
 ...
 
-Production Readiness: 8/10
+Production Readiness: 6/10 (64/100)
+
+  Security        90/100   -10 (2 warnings)
+  Reliability     90/100   -10 (2 warnings)
+  ...
 
 Next steps
   aspireforge add authentication   resolves SEC001
@@ -94,6 +98,9 @@ Next steps
 
 Every finding says **where** it is (file and line), **why** it matters, the **fix** command when
 one exists, and a link to the rule's **docs**. `--summary` shows just the checklist and score.
+The score starts at 100 and loses points per finding by severity - any error caps it at 60 - so it
+reflects how serious the findings are, not how many rules happened to pass
+([details](docs/commands/doctor.md#production-readiness-score)).
 `--format json` and `--format sarif` produce the same findings for tooling and GitHub code
 scanning. `--fail-on warning` makes CI fail on warnings, not just errors. Details:
 [`doctor`](docs/commands/doctor.md).
