@@ -126,8 +126,7 @@ public class DoctorCommand(ConsoleRenderer renderer)
         renderer.WriteSeparator();
         renderer.WriteLine();
 
-        var score = activeChecks.Count == 0 ? 10 : (int)Math.Round(10.0 * passedCount / activeChecks.Count);
-        renderer.WriteLine($"Production Readiness: {score}/10");
+        WriteScore(result, activeChecks);
 
         if (result.Issues.Count == 0)
         {
@@ -159,6 +158,53 @@ public class DoctorCommand(ConsoleRenderer renderer)
                 : $"  {manual} finding{(manual == 1 ? " needs" : "s need")} a code change - run without --summary to see where and how.");
         }
     }
+
+    // The overall score, why it isn't higher, and the same score per category - so it's clear where
+    // the points went. See ReadinessScore for the formula.
+    private void WriteScore(AnalysisResult result, IReadOnlyList<RuleCatalogEntry> activeChecks)
+    {
+        var score = ReadinessScore.Calculate(result.Issues);
+        var reason = score.CapReason is not null ? $" - {score.CapReason}" : string.Empty;
+
+        renderer.WriteLine($"Production Readiness: {score.OutOfTen}/10 ({score.Points}/100){reason}");
+
+        if (result.Issues.Count == 0)
+        {
+            return;
+        }
+
+        var categoryOf = activeChecks.ToDictionary(check => check.RuleId, check => check.Category);
+
+        renderer.WriteLine();
+
+        foreach (var category in activeChecks.Select(check => check.Category).Distinct())
+        {
+            var issues = result.Issues
+                .Where(issue => categoryOf.TryGetValue(issue.RuleId, out var c) && c == category)
+                .ToList();
+            var categoryScore = ReadinessScore.Calculate(issues);
+            var detail = issues.Count == 0
+                ? string.Empty
+                : $"   -{categoryScore.Penalty} ({DescribeCounts(issues)})";
+
+            renderer.WriteLine($"  {category.PadRight(15)}{categoryScore.Points,3}/100{detail}");
+        }
+
+        renderer.WriteLine();
+        renderer.WriteLine("  Score: 100 minus 30 per critical, 15 per error, 5 per warning, 2 per suggestion, 1 per info;");
+        renderer.WriteLine($"  any error caps it at {ReadinessScore.ErrorCap}, any critical at {ReadinessScore.CriticalCap}.");
+    }
+
+    // "1 error, 2 warnings, 3 info"
+    private static string DescribeCounts(IEnumerable<AnalysisIssue> issues) =>
+        string.Join(", ", issues
+            .GroupBy(issue => issue.Severity)
+            .OrderByDescending(group => group.Key)
+            .Select(group =>
+            {
+                var noun = group.Key.ToString().ToLowerInvariant();
+                return $"{group.Count()} {noun}{(group.Count() == 1 || group.Key == Severity.Info ? string.Empty : "s")}";
+            }));
 
     // Most severe first, then by rule ID, so the findings to act on first are at the top.
     private void WriteFindings(
