@@ -51,6 +51,34 @@ public class DoctorCommandTests : IDisposable
     }
 
     [Fact]
+    public async Task RunAsync_ShowsTheWeightedScore_WithAPerCategoryBreakdown()
+    {
+        var writer = new StringWriter();
+        var command = new DoctorCommand(new ConsoleRenderer(writer));
+
+        await command.RunAsync(_projectDirectory);
+
+        var output = writer.ToString();
+        Assert.Matches(@"Production Readiness: \d+/10 \(\d+/100\)", output);
+        Assert.Matches(@"  Security\s+\d+/100   -\d+ \(", output);
+        Assert.Contains("Score: 100 minus 30 per critical, 15 per error, 5 per warning", output);
+    }
+
+    // The cap wording itself is covered by ReadinessScoreTests; here, the property that matters.
+    [Fact]
+    public async Task RunAsync_NeverScoresAbove60_WhenAnErrorIsFound()
+    {
+        File.WriteAllText(Path.Combine(_projectDirectory, "Cors.cs"), "policy.AllowAnyOrigin();");
+        var writer = new StringWriter();
+        var command = new DoctorCommand(new ConsoleRenderer(writer));
+
+        await command.RunAsync(_projectDirectory);
+
+        var points = int.Parse(System.Text.RegularExpressions.Regex.Match(writer.ToString(), @"\((\d+)/100\)").Groups[1].Value);
+        Assert.InRange(points, 0, 60);
+    }
+
+    [Fact]
     public async Task RunAsync_ShowsTheRuleIdNextToEachFailingCheck()
     {
         var writer = new StringWriter();
