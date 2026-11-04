@@ -6,7 +6,7 @@ what's missing.
 ## Usage
 
 ```bash
-aspireforge doctor [<path>] [--fail-on <severity>] [--format <format>] [--vulnerable]
+aspireforge doctor [<path>] [--fail-on <severity>] [--format <format>] [--vulnerable] [--summary]
 ```
 
 | Argument/Option | Description | Default |
@@ -15,47 +15,82 @@ aspireforge doctor [<path>] [--fail-on <severity>] [--format <format>] [--vulner
 | `--fail-on` | The minimum issue severity that causes a non-zero exit code: `info`, `suggestion`, `warning`, `error`, or `critical`. | `error` |
 | `--format` | Output format: `text`, `json`, or `sarif`. | `text` |
 | `--vulnerable` | Also scan packages, including transitive ones, for known security vulnerabilities ([DEP002](../rules/deployment.md#dep002---vulnerable-packages)). Runs `dotnet list package --vulnerable`, so it's slower and needs network access. | off |
-| `--vulnerable` | Also scan packages, including transitive ones, for known security vulnerabilities ([DEP002](../rules/deployment.md#dep002---vulnerable-packages)). Runs `dotnet list package --vulnerable`, so it is slower and needs network access. | off |
+| `--summary` | Text output only: show the checklist, totals, and next steps, without the per-finding details. | off |
 
 ## Text output (default)
+
+The report has four parts. This is a freshly generated project (`aspireforge new Orders`), shortened
+where marked `...`:
 
 ```
 AspireForge Doctor
 
-Project: OrdersApi.Api
+Project: Orders.Api
 Framework: net10.0
+Path: src/Orders.Api/Orders.Api.csproj
 
 Security
-  ⚠ Authentication not configured
+  ⚠ Authentication not configured                                 SEC001
   ✓ CORS policy restricts origins
   ✓ HTTPS configured
-
-Reliability
-  ⚠ Health checks missing
-  ⚠ Global exception handling missing
+  ⚠ HSTS missing                                                  SEC006
+  ...
 
 Observability
-  ⚠ OpenTelemetry missing
-  ⚠ Structured logging missing
+  ○ OpenTelemetry missing                                         OBS001
+  ...
 
-Testing
-  ✓ Unit tests detected
-  ⚠ Integration tests not detected
+════════════════════════════ Findings (10) ════════════════════════════
 
-Architecture
-  ✓ No obvious dependency violations
+⚠ DEP003 · Container image problems · warning
+  Where  Dockerfile:8
+  Why    Dockerfile has container problems: the final stage has no USER instruction, so the
+         container runs as root - add `USER $APP_UID` (the non-root user the .NET images ship)
+         (Dockerfile:8).
+  Docs   https://github.com/Asif-Nawaz27/dotnet_aspire_forge/blob/main/docs/rules/deployment.md#dep003---container-image-problems
+
+⚠ SEC001 · Authentication not configured · warning
+  Scope  whole project
+  Why    No call to AddAuthentication was found. If this API requires callers to be identified,
+         register an authentication scheme.
+  Fix    aspireforge add authentication
+  Docs   https://github.com/Asif-Nawaz27/dotnet_aspire_forge/blob/main/docs/rules/security.md#sec001---authentication-not-configured
+...
 
 --------------------------------
-Errors:   0
-Warnings: 6
-Passed:   4
+Errors:      0
+Warnings:    6
+Suggestions: 4
+Passed:      30
 --------------------------------
 
-Production Readiness: 4/10
+Production Readiness: 8/10
+
+Next steps
+  aspireforge add authentication   resolves SEC001
+  aspireforge fix REL001           resolves REL001
+  aspireforge add telemetry        resolves OBS001, OBS002
+  6 findings need a code change - see Why and Docs above.
 ```
 
-`✓` means the rule found nothing to report. `⚠`/`✗` show the rule's title, using `✗` for
-`error`/`critical` severity and `⚠` otherwise.
+1. **Checklist** - one line per enabled rule, grouped by category. `✓` means the rule found
+   nothing; otherwise the line shows the finding's title and, on the right, its rule ID. The symbol
+   shows severity: `✗` error/critical, `⚠` warning, `○` suggestion/info.
+2. **Findings** - one block per finding, most severe first:
+
+   | Label | Shows |
+   | --- | --- |
+   | `Where` | the file and line, relative to the current directory when it's inside it |
+   | `Scope` | `whole project`, instead of `Where`, for findings about the project as a whole (something missing, a framework version) |
+   | `Why` | what's wrong and why it matters, wrapped to the terminal width |
+   | `Fix` | the single command that resolves it - `aspireforge fix <rule>` when there's an automatic fix, or `aspireforge add <feature>` when adding a feature satisfies the rule. Omitted when the fix is a code change |
+   | `Docs` | the rule's section in these docs |
+
+3. **Totals and score.**
+4. **Next steps** - every one-command remedy, grouped by command, plus how many findings need a code
+   change.
+
+Pass `--summary` to skip the findings blocks when you only want the checklist and score.
 
 ## JSON output
 

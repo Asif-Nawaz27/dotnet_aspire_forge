@@ -30,6 +30,54 @@ public class DoctorCommandTests : IDisposable
         Assert.Contains("Authentication not configured", output);
     }
 
+    [Fact]
+    public async Task RunAsync_ShowsADetailBlockPerFinding_WithNextSteps()
+    {
+        var writer = new StringWriter();
+        var command = new DoctorCommand(new ConsoleRenderer(writer));
+
+        await command.RunAsync(_projectDirectory);
+
+        var output = writer.ToString();
+        Assert.Contains("Findings (", output);
+        Assert.Contains("⚠ SEC001 · Authentication not configured · warning", output);
+        Assert.Contains("  Scope  whole project", output);
+        Assert.Contains("  Why    No call to AddAuthentication was found.", output);
+        Assert.Contains("  Fix    aspireforge add authentication", output);
+        Assert.Contains("  Docs   https://github.com/Asif-Nawaz27/dotnet_aspire_forge/blob/main/docs/rules/security.md#sec001---authentication-not-configured", output);
+        Assert.Contains("Next steps", output);
+        Assert.Contains("aspireforge add authentication   resolves SEC001", output);
+        Assert.Contains("Suggestions:", output);
+    }
+
+    [Fact]
+    public async Task RunAsync_ShowsTheRuleIdNextToEachFailingCheck()
+    {
+        var writer = new StringWriter();
+        var command = new DoctorCommand(new ConsoleRenderer(writer));
+
+        await command.RunAsync(_projectDirectory);
+
+        var checkLine = writer.ToString().Split('\n').Single(line => line.Contains("⚠ Authentication not configured"));
+        Assert.EndsWith("SEC001", checkLine.TrimEnd());
+    }
+
+    [Fact]
+    public async Task RunAsync_HidesTheDetails_WithSummary()
+    {
+        var writer = new StringWriter();
+        var command = new DoctorCommand(new ConsoleRenderer(writer));
+
+        await command.RunAsync(_projectDirectory, summaryOnly: true);
+
+        var output = writer.ToString();
+        Assert.Contains("Authentication not configured", output);
+        Assert.DoesNotContain("Findings (", output);
+        Assert.DoesNotContain("  Why", output);
+        Assert.Contains("Next steps", output);
+        Assert.Contains("run without --summary to see where and how", output);
+    }
+
     // DEP002 is opt-in: without --vulnerable it's neither run nor shown, so it can't affect the score.
     [Fact]
     public async Task RunAsync_DoesNotShowTheVulnerabilityCheck_UnlessRequested()

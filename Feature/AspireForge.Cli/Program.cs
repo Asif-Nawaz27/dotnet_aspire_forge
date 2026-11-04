@@ -86,12 +86,18 @@ static Command BuildDoctorCommand()
         Description = "Also scan packages for known security vulnerabilities (DEP002). Runs `dotnet list package --vulnerable`, which needs network access.",
     };
 
+    var summaryOption = new Option<bool>("--summary")
+    {
+        Description = "Show only the checklist and score - skip the per-finding details (where, why, fix, docs).",
+    };
+
     var command = new Command("doctor", "Analyze a project against AspireForge's rule set.")
     {
         pathArgument,
         failOnOption,
         formatOption,
         vulnerableOption,
+        summaryOption,
     };
 
     command.SetAction((parseResult, cancellationToken) => new DoctorCommand(new ConsoleRenderer())
@@ -100,6 +106,7 @@ static Command BuildDoctorCommand()
             parseResult.GetValue(failOnOption),
             parseResult.GetValue(formatOption),
             parseResult.GetValue(vulnerableOption),
+            parseResult.GetValue(summaryOption),
             cancellationToken));
 
     return command;
