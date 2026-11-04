@@ -58,46 +58,42 @@ with AspireForge.
 
 ## `doctor` example
 
+A freshly generated project (`aspireforge new Orders`), shortened where marked `...`:
+
 ```
 AspireForge Doctor
 
-Project: Orders.Api.Api
+Project: Orders.Api
 Framework: net10.0
+Path: src/Orders.Api/Orders.Api.csproj
 
 Security
-  ⚠ Authentication not configured
+  ⚠ Authentication not configured                                 SEC001
   ✓ CORS policy restricts origins
-  ✓ HTTPS configured
+  ⚠ HSTS missing                                                  SEC006
+  ...
 
-Reliability
-  ⚠ Health checks missing
-  ⚠ Global exception handling missing
+════════════════════════════ Findings (10) ════════════════════════════
 
-Observability
-  ⚠ OpenTelemetry missing
-  ⚠ Structured logging missing
+⚠ SEC001 · Authentication not configured · warning
+  Scope  whole project
+  Why    No call to AddAuthentication was found. If this API requires callers to be identified,
+         register an authentication scheme.
+  Fix    aspireforge add authentication
+  Docs   https://github.com/Asif-Nawaz27/dotnet_aspire_forge/blob/main/docs/rules/security.md#sec001---authentication-not-configured
+...
 
-Testing
-  ⚠ No test project detected
-  ✓ Integration tests detected
+Production Readiness: 8/10
 
-Architecture
-  ✓ No obvious dependency violations
-
-Performance
-  ⚠ Response compression missing
-  ⚠ Rate limiting missing
-  ✓ No blocking calls on async code
-
---------------------------------
-Errors:   0
-Warnings: 8
-Passed:   5
---------------------------------
-
-Production Readiness: 4/10
+Next steps
+  aspireforge add authentication   resolves SEC001
+  aspireforge fix REL001           resolves REL001
+  aspireforge add telemetry        resolves OBS001, OBS002
+  6 findings need a code change - see Why and Docs above.
 ```
 
+Every finding says **where** it is (file and line), **why** it matters, the **fix** command when
+one exists, and a link to the rule's **docs**. `--summary` shows just the checklist and score.
 `--format json` and `--format sarif` produce the same findings for tooling and GitHub code
 scanning. `--fail-on warning` makes CI fail on warnings, not just errors. Details:
 [`doctor`](docs/commands/doctor.md).
