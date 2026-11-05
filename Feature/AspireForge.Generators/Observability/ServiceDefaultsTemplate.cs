@@ -25,6 +25,10 @@ internal static class ServiceDefaultsTemplate
                 builder.ConfigureOpenTelemetry();
                 builder.AddDefaultHealthChecks();
 
+                // Every HttpClient gets retries with backoff, a circuit breaker, and timeouts, so one slow
+                // dependency can't stall this service (REL003).
+                builder.Services.ConfigureHttpClientDefaults(http => http.AddStandardResilienceHandler());
+
                 return builder;
             }
 

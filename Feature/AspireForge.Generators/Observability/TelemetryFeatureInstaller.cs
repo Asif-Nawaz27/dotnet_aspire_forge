@@ -25,6 +25,13 @@ public sealed class TelemetryFeatureInstaller : IFeatureInstaller
         var apiCsproj = CleanArchitectureLayout.ApiCsproj(context);
         var apiProjectPath = CleanArchitectureLayout.ApiProjectPath(context);
 
+        // `aspireforge new` already includes ServiceDefaults; running `add telemetry` afterwards must not
+        // create a second project or wire it into Program.cs twice.
+        if (File.Exists(serviceDefaultsCsproj))
+        {
+            return [FeatureSteps.AlreadyInstalled("the ServiceDefaults project already exists - nothing to change")];
+        }
+
         CreateServiceDefaultsProject(context, serviceDefaultsPath, serviceDefaultsCsproj);
         steps.Add("Added ServiceDefaults project");
 
@@ -75,6 +82,7 @@ public sealed class TelemetryFeatureInstaller : IFeatureInstaller
                      "OpenTelemetry.Instrumentation.Http",
                      "OpenTelemetry.Instrumentation.Runtime",
                      "OpenTelemetry.Exporter.OpenTelemetryProtocol",
+                     "Microsoft.Extensions.Http.Resilience",
                  })
         {
             DotnetCli.Run(["add", serviceDefaultsCsproj, "package", package], context.RootPath);

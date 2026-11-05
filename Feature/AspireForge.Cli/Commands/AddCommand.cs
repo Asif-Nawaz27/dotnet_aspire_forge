@@ -53,7 +53,9 @@ public class AddCommand(ConsoleRenderer renderer)
             }
 
             renderer.WriteLine();
-            renderer.WriteLine($"{installer.Feature.Name} integration added successfully.");
+            renderer.WriteLine(FeatureSteps.IsAlreadyInstalled(steps)
+                ? $"{installer.Feature.Name} was already set up - no changes made."
+                : $"{installer.Feature.Name} integration added successfully.");
             return ExitCodes.Success;
         }
         catch (Exception ex)

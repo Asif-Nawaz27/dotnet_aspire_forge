@@ -25,7 +25,7 @@ public class CleanArchitectureGeneratorTests : IDisposable
         Assert.True(File.Exists(Path.Combine(root, "src", "SampleApi.Application", "SampleApi.Application.csproj")));
         Assert.True(File.Exists(Path.Combine(root, "src", "SampleApi.Infrastructure", "SampleApi.Infrastructure.csproj")));
         Assert.True(File.Exists(Path.Combine(root, "src", "SampleApi.Api", "SampleApi.Api.csproj")));
-        Assert.True(File.Exists(Path.Combine(root, "tests", "SampleApi.IntegrationTests", "SampleApi.IntegrationTests.csproj")));
+        Assert.True(File.Exists(Path.Combine(root, "tests", "SampleApi.Api.IntegrationTests", "SampleApi.Api.IntegrationTests.csproj")));
         Assert.True(File.Exists(Path.Combine(root, "Dockerfile")));
         Assert.True(File.Exists(Path.Combine(root, ".dockerignore")));
         Assert.True(File.Exists(Path.Combine(root, "docker-compose.yml")));

@@ -27,9 +27,10 @@ bespoke templating engine - see [Architecture overview](../architecture/overview
 │   ├── <name>.Domain/
 │   ├── <name>.Application/
 │   ├── <name>.Infrastructure/
-│   └── <name>.Api/
+│   ├── <name>.Api/
+│   └── <name>.ServiceDefaults/
 ├── tests/
-│   └── <name>.IntegrationTests/
+│   └── <name>.Api.IntegrationTests/
 ├── Dockerfile
 ├── .dockerignore
 ├── docker-compose.yml
@@ -38,6 +39,36 @@ bespoke templating engine - see [Architecture overview](../architecture/overview
 ├── <name>.slnx
 └── .github/workflows/ci.yml
 ```
+
+`new` needs network access: it adds NuGet packages (OpenTelemetry, HTTP resilience, and the latest
+`Microsoft.AspNetCore.OpenApi`) while generating.
+
+## Production-ready out of the box
+
+A generated project passes AspireForge's own [`doctor`](doctor.md) - every rule except one:
+
+```
+⚠ Authentication not configured                                 SEC001
+Production Readiness: 9/10 (95/100)
+```
+
+Authentication is left to you on purpose: which scheme to use (JWT, cookies, Entra ID, ...) is a real
+decision. `aspireforge add authentication` adds JWT bearer, after which the project scores `10/10`.
+A test in AspireForge's own suite (`GeneratedProjectDoctorTests`) generates a project and runs every
+rule against it, so the generator and the rules can't drift apart.
+
+What makes it pass:
+
+| Part | What `new` puts there | Rules it satisfies |
+| --- | --- | --- |
+| `<name>.Api/Program.cs` | `AddProblemDetails` + `UseExceptionHandler` (first in the pipeline), `UseHsts` outside development, `UseHttpsRedirection`, response compression, a per-client rate limit (100 requests/minute), OpenAPI in development only, and a `GET /` status endpoint - in the middleware order SEC009 expects | REL002, SEC003, SEC006, SEC007, SEC009, PERF001, PERF002 |
+| `<name>.ServiceDefaults` | the [`add telemetry`](add.md) project - OpenTelemetry traces, metrics, and logs with an OTLP exporter, `/health` and `/alive`, and HTTP resilience for every `HttpClient` | REL001, REL003, OBS001, OBS002, OBS003 |
+| `Dockerfile` | multi-stage build, pinned base images, `USER $APP_UID` (non-root), with a `.dockerignore` | DEP003 |
+| `<name>.Api.IntegrationTests` | an xUnit project named after the Api it tests | TEST001, TEST002 |
+| `Microsoft.AspNetCore.OpenApi` | updated to the latest stable version - the version the SDK's `webapi` template pins (10.0.9) depends on a `Microsoft.OpenApi` release with a known high-severity vulnerability | DEP002 |
+
+The rate limit partitions by client IP address. Behind a reverse proxy, configure forwarded headers
+so it sees the real client rather than the proxy - or adjust or remove the limiter in `Program.cs`.
 
 ## Example
 
@@ -52,9 +83,14 @@ Created OrdersApi (clean architecture):
   src/OrdersApi.Application/
   src/OrdersApi.Infrastructure/
   src/OrdersApi.Api/
-  tests/OrdersApi.IntegrationTests/
+  tests/OrdersApi.Api.IntegrationTests/
   Added README.md
   Added .gitignore
+  Added ServiceDefaults project
+  Configured metrics and traces
+  Configured structured logging
+  Configured health checks
+  Wired ServiceDefaults into the Api
   Added Dockerfile
   Added .dockerignore
   Added docker-compose.yml

@@ -14,6 +14,9 @@ internal static class DockerAssets
         WORKDIR /app
         COPY --from=build /app .
 
+        # The .NET images ship a non-root 'app' user; never run the service as root (DEP003).
+        USER $APP_UID
+
         ENTRYPOINT ["dotnet", "{apiProjectName}.dll"]
         """;
 
