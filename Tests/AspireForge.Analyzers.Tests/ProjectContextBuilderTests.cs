@@ -104,6 +104,37 @@ public class ProjectContextBuilderTests : IDisposable
         return apiDirectory;
     }
 
+    // Fails on every OS if normalisation is removed, unlike the end-to-end test below, which can only
+    // fail on Linux and macOS - Windows accepts backslashes either way.
+    [Theory]
+    [InlineData(@"..\Lib\Lib.csproj", "../Lib/Lib.csproj")]
+    [InlineData(@"..\..\src\Lib\Lib.csproj", "../../src/Lib/Lib.csproj")]
+    [InlineData("../Lib/Lib.csproj", "../Lib/Lib.csproj")]
+    public void NormalizeReferencePath_UsesForwardSlashes(string reference, string expected) =>
+        Assert.Equal(expected, ProjectContextBuilder.NormalizeReferencePath(reference));
+
+    // `dotnet add reference` writes backslashes on every OS. Regression test: on Linux this reference
+    // was silently skipped, so rules couldn't see any code in referenced projects.
+    [Fact]
+    public void Build_IncludesSourceFilesFromProjectsReferencedWithBackslashes()
+    {
+        var serviceDefaultsDirectory = Path.Combine(_root, "ServiceDefaults");
+        Directory.CreateDirectory(serviceDefaultsDirectory);
+        File.WriteAllText(Path.Combine(serviceDefaultsDirectory, "Extensions.cs"), "// service defaults");
+
+        var apiDirectory = WriteProject("""
+            <Project Sdk="Microsoft.NET.Sdk.Web">
+              <ItemGroup>
+                <ProjectReference Include="..\ServiceDefaults\ServiceDefaults.csproj" />
+              </ItemGroup>
+            </Project>
+            """);
+
+        var context = ProjectContextBuilder.Build(apiDirectory);
+
+        Assert.Contains(context.SourceFiles, file => file.EndsWith("Extensions.cs"));
+    }
+
     [Fact]
     public void Build_IncludesSourceFilesFromReferencedProjects()
     {

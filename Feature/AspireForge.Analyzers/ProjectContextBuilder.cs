@@ -44,13 +44,20 @@ public static class ProjectContextBuilder
 
     private static IEnumerable<string> EnumerateReferencedSourceFiles(string rootDirectory, string referenceRelativePath)
     {
-        var referencedProjectFile = Path.GetFullPath(Path.Combine(rootDirectory, referenceRelativePath));
+        var referencedProjectFile = Path.GetFullPath(Path.Combine(rootDirectory, NormalizeReferencePath(referenceRelativePath)));
         var referencedDirectory = Path.GetDirectoryName(referencedProjectFile);
 
         return referencedDirectory is not null && Directory.Exists(referencedDirectory)
             ? EnumerateSourceFiles(referencedDirectory)
             : [];
     }
+
+    // Project files use backslashes in <ProjectReference Include="..\Lib\Lib.csproj"> on every OS - it's
+    // what `dotnet add reference` writes. On Linux and macOS a backslash is an ordinary file name
+    // character, so the path has to be normalised or the referenced project is silently skipped, and
+    // rules looking for code in it (ServiceDefaults, Infrastructure) report false findings. Forward
+    // slashes work on Windows too.
+    public static string NormalizeReferencePath(string referencePath) => referencePath.Replace('\\', '/');
 
     private static string LoadProject(string path)
     {
