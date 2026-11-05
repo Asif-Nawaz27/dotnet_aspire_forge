@@ -25,6 +25,28 @@ public class REL003Tests
         Assert.NotNull(await _rule.EvaluateAsync(project.Context));
     }
 
+    [Theory]
+    [InlineData("builder.Services.AddHttpClient(\"github\");")]
+    [InlineData("builder.Services.AddHttpClient<GitHubClient>(c => c.BaseAddress = uri);")]
+    [InlineData("builder.Services.ConfigureHttpClientDefaults(http => http.AddServiceDiscovery());")]
+    public async Task Fires_ForEveryFormOfHttpClientRegistration_WithoutResilience(string source)
+    {
+        using var project = TestProject.Create(source);
+
+        Assert.NotNull(await _rule.EvaluateAsync(project.Context));
+    }
+
+    // OpenTelemetry's HTTP instrumentation registers no client - this used to be a false positive,
+    // because "AddHttpClient" is the start of "AddHttpClientInstrumentation".
+    [Fact]
+    public async Task DoesNotFire_ForHttpClientInstrumentationAlone()
+    {
+        using var project = TestProject.Create(
+            "builder.Services.AddOpenTelemetry().WithTracing(t => t.AddAspNetCoreInstrumentation().AddHttpClientInstrumentation());");
+
+        Assert.Null(await _rule.EvaluateAsync(project.Context));
+    }
+
     [Fact]
     public async Task DoesNotFire_WhenResilienceHandlerIsAdded()
     {
