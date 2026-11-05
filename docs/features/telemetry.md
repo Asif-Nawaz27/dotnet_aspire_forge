@@ -19,6 +19,7 @@ inventing its own approach.
 | Configured metrics and traces | Adds `OpenTelemetry.Extensions.Hosting`, `OpenTelemetry.Instrumentation.AspNetCore`, `OpenTelemetry.Instrumentation.Http`, `OpenTelemetry.Instrumentation.Runtime`, and `OpenTelemetry.Exporter.OpenTelemetryProtocol`. |
 | Configured structured logging | OpenTelemetry logging is configured as part of the same `Extensions.cs`. |
 | Configured health checks | `MapHealthChecks`/`AddHealthChecks` come transitively from the `Microsoft.AspNetCore.App` framework reference - no separate package needed. |
+| HTTP resilience | Adds `Microsoft.Extensions.Http.Resilience`; `AddServiceDefaults()` calls `ConfigureHttpClientDefaults(http => http.AddStandardResilienceHandler())`, so every `HttpClient` gets retries with backoff, a circuit breaker, and timeouts ([REL003](../rules/reliability.md#rel003---outbound-http-without-resilience)) - as Microsoft's own Aspire ServiceDefaults template does. |
 | Wired ServiceDefaults into the Api | Adds a project reference from `Api` to `ServiceDefaults`, then inserts `builder.AddServiceDefaults();` (service registration) and `app.MapDefaultEndpoints();` (health endpoints) into `Api`'s `Program.cs`. |
 
 ## Verifying it

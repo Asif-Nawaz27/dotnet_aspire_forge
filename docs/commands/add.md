@@ -20,9 +20,9 @@ drift out of date with what's actually implemented.
 | `postgres` | Adds Npgsql, an EF Core `DbContext`, connection configuration, and migrations support. See [postgres](../features/postgres.md). |
 | `sqlserver` | Adds `Microsoft.EntityFrameworkCore.SqlServer`, an EF Core `DbContext`, connection configuration, and migrations support. See [sqlserver](../features/sqlserver.md). |
 | `redis` | Adds the StackExchange.Redis distributed cache client. See [redis](../features/redis.md). |
-| `telemetry` | Adds a `ServiceDefaults` project configuring OpenTelemetry metrics/traces/logs and health checks. See [telemetry](../features/telemetry.md). |
+| `telemetry` | Adds a `ServiceDefaults` project configuring OpenTelemetry metrics/traces/logs, health checks, and HTTP resilience for every `HttpClient`. Projects created by `aspireforge new` already include it - running it again is a no-op. See [telemetry](../features/telemetry.md). |
 | `docker` | (Re)generates `Dockerfile`, `.dockerignore`, and `docker-compose.yml`, wired to whatever databases/caches are already configured. Safe to re-run after adding `postgres`/`sqlserver`/`redis` to refresh the compose file. |
-| `authentication` | Adds JWT Bearer authentication/authorization using ASP.NET Core's own middleware, plus an example `/secure` endpoint. |
+| `authentication` | Adds JWT Bearer authentication/authorization using ASP.NET Core's own middleware, plus an example `/secure` endpoint. The signing key is **not** written to `appsettings.json` (it ships with every build - [SEC004](../rules/security.md#sec004---secrets-in-configuration-files)): `appsettings.Development.json` gets a development-only placeholder, and every other environment must supply `Jwt__SigningKey` (32+ characters). The middleware goes after the exception handler and before the rate limiter ([SEC009](../rules/security.md#sec009---middleware-in-the-wrong-order)). |
 
 Each one prints a checklist of what it did:
 

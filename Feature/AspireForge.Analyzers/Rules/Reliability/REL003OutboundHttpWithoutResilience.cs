@@ -39,7 +39,9 @@ public sealed partial class REL003OutboundHttpWithoutResilience : IAnalysisRule
                 context.ProjectFile);
         }
 
-        if (!await SourceFileHeuristics.ContainsAnyAsync(context, cancellationToken, "AddHttpClient", "ConfigureHttpClientDefaults"))
+        // An actual registration call - not a longer name that merely starts with it, such as
+        // OpenTelemetry's AddHttpClientInstrumentation(), which registers no client at all.
+        if (!await SourceFileHeuristics.MatchesAsync(context, cancellationToken, HttpClientRegistration()))
         {
             return null;
         }
@@ -61,4 +63,9 @@ public sealed partial class REL003OutboundHttpWithoutResilience : IAnalysisRule
 
     [GeneratedRegex(@"\bnew\s+HttpClient\s*\(")]
     private static partial Regex NewHttpClient();
+
+    // AddHttpClient(...), AddHttpClient<TClient>(...), AddHttpClient<TClient, TImpl>(...), or
+    // ConfigureHttpClientDefaults(...).
+    [GeneratedRegex(@"\b(?:AddHttpClient\s*(?:<[^<>()]*>)?|ConfigureHttpClientDefaults)\s*\(")]
+    private static partial Regex HttpClientRegistration();
 }

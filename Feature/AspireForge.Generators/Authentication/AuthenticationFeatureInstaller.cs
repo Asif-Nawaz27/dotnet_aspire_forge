@@ -27,6 +27,9 @@ public sealed class AuthenticationFeatureInstaller : IFeatureInstaller
         DotnetCli.Run(["add", apiCsproj, "package", "Microsoft.AspNetCore.Authentication.JwtBearer"], context.RootPath);
         steps.Add("Added JWT Bearer authentication");
 
+        // appsettings.json ships with every build, so it holds no key (SEC004); each environment supplies
+        // one - user-secrets locally, Jwt__SigningKey in production. Only the development file gets a
+        // placeholder, so `dotnet run` works out of the box.
         AppSettingsEditor.AddSection(
             Path.Combine(apiProjectPath, "appsettings.json"),
             "Jwt",
@@ -34,9 +37,23 @@ public sealed class AuthenticationFeatureInstaller : IFeatureInstaller
             {
                 ["Issuer"] = context.ProjectName,
                 ["Audience"] = context.ProjectName,
-                ["SigningKey"] = "CHANGE_ME_JWT_SIGNING_KEY_MUST_BE_AT_LEAST_32_CHARACTERS_LONG",
+                ["SigningKey"] = string.Empty,
             });
-        steps.Add("Added JWT configuration");
+
+        var developmentSettings = Path.Combine(apiProjectPath, "appsettings.Development.json");
+
+        if (File.Exists(developmentSettings))
+        {
+            AppSettingsEditor.AddSection(
+                developmentSettings,
+                "Jwt",
+                new Dictionary<string, string>
+                {
+                    ["SigningKey"] = "CHANGE_ME_DEVELOPMENT_ONLY_JWT_SIGNING_KEY_32_CHARS_MIN",
+                });
+        }
+
+        steps.Add("Added JWT configuration (signing key: development placeholder only - set Jwt__SigningKey per environment)");
 
         ProgramFileEditor.AddUsingsAndServiceRegistration(
             programCsPath,
@@ -68,8 +85,10 @@ public sealed class AuthenticationFeatureInstaller : IFeatureInstaller
             ]);
         steps.Add("Added authentication services");
 
-        ProgramFileEditor.InsertAfterBuilderBuild(
+        // After the exception handler and before the rate limiter, the order SEC009 checks.
+        ProgramFileEditor.InsertBeforeOrAfterBuilderBuild(
             programCsPath,
+            "app.UseRateLimiter(",
             ["app.UseAuthentication();", "app.UseAuthorization();"]);
         steps.Add("Added authentication middleware");
 

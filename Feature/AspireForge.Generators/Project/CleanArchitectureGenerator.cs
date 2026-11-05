@@ -2,16 +2,22 @@ using AspireForge.Core.Features;
 using AspireForge.Core.Generation;
 using AspireForge.Generators.Docker;
 using AspireForge.Generators.GitHub;
+using AspireForge.Generators.Observability;
 
 namespace AspireForge.Generators.Project;
 
 // Composes existing dotnet new templates (classlib/webapi/xunit) rather than a bespoke template engine.
 public sealed class CleanArchitectureGenerator : IProjectGenerator
 {
+    // Telemetry (the ServiceDefaults project: OpenTelemetry + health checks, the .NET Aspire convention)
+    // is part of every new project, so `aspireforge new` output passes its own `doctor` - see
+    // GeneratedProjectDoctorTests. Authentication is the one finding deliberately left: which scheme to
+    // use is the developer's decision (`aspireforge add authentication`).
     private static readonly IFeatureInstaller[] Features =
     [
         new ReadmeFeatureInstaller(),
         new GitIgnoreFeatureInstaller(),
+        new TelemetryFeatureInstaller(),
         new DockerFeatureInstaller(),
         new GitHubActionsFeatureInstaller(),
     ];
@@ -66,7 +72,9 @@ public sealed class CleanArchitectureGenerator : IProjectGenerator
             new ProjectTemplate("Application", "classlib", ProjectName("Application"), Path.Combine(srcDirectory, ProjectName("Application"))),
             new ProjectTemplate("Infrastructure", "classlib", ProjectName("Infrastructure"), Path.Combine(srcDirectory, ProjectName("Infrastructure"))),
             new ProjectTemplate("Api", "webapi", ProjectName("Api"), Path.Combine(srcDirectory, ProjectName("Api"))),
-            new ProjectTemplate("IntegrationTests", "xunit", ProjectName("IntegrationTests"), Path.Combine(testsDirectory, ProjectName("IntegrationTests"))),
+            // Named after the Api it tests ({Name}.Api.IntegrationTests), so TEST001 (a test project for
+            // the Api) and TEST002 (an integration test project) both find it.
+            new ProjectTemplate("IntegrationTests", "xunit", ProjectName("Api.IntegrationTests"), Path.Combine(testsDirectory, ProjectName("Api.IntegrationTests"))),
         ];
     }
 
@@ -83,6 +91,26 @@ public sealed class CleanArchitectureGenerator : IProjectGenerator
 
         LinkArchitectureReferences(templates, root);
         RemoveTemplatePlaceholders(templates);
+        WriteApiProgram(options, templates);
+        UpdateTemplatePackages(templates, root);
+    }
+
+    // The installed `webapi` template pins whatever Microsoft.AspNetCore.OpenApi version shipped with
+    // the SDK - 10.0.9 in SDK 10.0.301, which depends on Microsoft.OpenApi 2.0.0, a package with a
+    // known high-severity vulnerability (GHSA-v5pm-xwqc-g5wc; DEP002 / NuGet audit NU1903). Re-adding
+    // it without a version moves it to the latest stable release, so new projects don't start out
+    // vulnerable.
+    private static void UpdateTemplatePackages(IReadOnlyList<ProjectTemplate> templates, string root)
+    {
+        var api = templates.First(template => template.Layer == "Api");
+        DotnetCli.Run(["add", api.ProjectPath, "package", "Microsoft.AspNetCore.OpenApi"], root);
+    }
+
+    // Replace the webapi template's sample Program.cs with a production-shaped one (ApiProgramTemplate).
+    private static void WriteApiProgram(GenerationOptions options, IReadOnlyList<ProjectTemplate> templates)
+    {
+        var api = templates.First(template => template.Layer == "Api");
+        File.WriteAllText(Path.Combine(api.ProjectPath, "Program.cs"), ApiProgramTemplate.ProgramCs(options.ProjectName));
     }
 
     private static List<string> ConfigureTemplateArguments(ProjectTemplate template, GenerationOptions options)

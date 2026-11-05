@@ -20,6 +20,25 @@ internal static class ProgramFileEditor
         File.WriteAllLines(programCsPath, fileLines);
     }
 
+    // Middleware that must run before a later middleware (e.g. authentication before the rate limiter, as
+    // SEC009 expects) goes just before `beforeAnchor` when it's present; otherwise - a project that never
+    // added that middleware - just after builder.Build(), as before.
+    public static void InsertBeforeOrAfterBuilderBuild(string programCsPath, string beforeAnchor, IReadOnlyList<string> lines)
+    {
+        var fileLines = File.ReadAllLines(programCsPath).ToList();
+
+        if (fileLines.Exists(line => line.Contains(beforeAnchor)))
+        {
+            InsertBefore(fileLines, beforeAnchor, lines);
+        }
+        else
+        {
+            InsertAfter(fileLines, "builder.Build()", lines);
+        }
+
+        File.WriteAllLines(programCsPath, fileLines);
+    }
+
     public static void InsertBeforeAppRun(string programCsPath, IReadOnlyList<string> lines)
     {
         var fileLines = File.ReadAllLines(programCsPath).ToList();

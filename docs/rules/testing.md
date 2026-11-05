@@ -21,5 +21,5 @@ rather than report a false positive.
 Same discovery as TEST001, but looks for any directory under `tests/` containing "Integration"
 (regardless of which project it matches) rather than a project-specific match.
 
-**Fix:** Add an integration test project, for example `tests/{SolutionName}.IntegrationTests` -
+**Fix:** Add an integration test project, for example `tests/{ProjectName}.Api.IntegrationTests` -
 exactly what `aspireforge new` already generates for you.

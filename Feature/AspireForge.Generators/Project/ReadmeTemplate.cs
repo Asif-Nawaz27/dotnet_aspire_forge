@@ -13,7 +13,8 @@ internal static class ReadmeTemplate
         - `src/{projectName}.Application` - use cases and abstractions, depends only on Domain.
         - `src/{projectName}.Infrastructure` - implementations of Application abstractions (persistence, external services).
         - `src/{projectName}.Api` - the ASP.NET Core host and composition root.
-        - `tests/{projectName}.IntegrationTests` - end-to-end tests against the Api.
+        - `src/{projectName}.ServiceDefaults` - OpenTelemetry, health checks (`/health`, `/alive`), and HTTP resilience.
+        - `tests/{projectName}.Api.IntegrationTests` - end-to-end tests against the Api.
 
         ## Getting started
 
