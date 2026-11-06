@@ -54,6 +54,8 @@ public sealed partial class SEC004SecretsInConfiguration : IAnalysisRule
             }
         }
 
+        findings.RemoveAll(f => context.Suppressions.IsSuppressed(Id, f.File, f.Line));
+
         if (findings.Count == 0)
         {
             return null;

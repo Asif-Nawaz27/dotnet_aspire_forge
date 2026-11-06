@@ -74,6 +74,8 @@ public sealed partial class SEC010TlsCertificateValidationDisabled : IAnalysisRu
             }
         }
 
+        findings.RemoveAll(f => context.Suppressions.IsSuppressed(Id, f.File, f.Line));
+
         if (findings.Count == 0)
         {
             return null;

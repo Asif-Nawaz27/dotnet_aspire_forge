@@ -78,6 +78,25 @@ Two pure functions apply it, both in `AnalysisRuleSet`:
 Overrides apply identically across all three of `doctor`'s output formats, since text/JSON/SARIF
 all render from the same config-adjusted `AnalysisResult`.
 
+## Suppressions
+
+Inline comments and the baseline ([how to use them](../commands/doctor.md#accepting-findings)) are
+both applied through `IFindingSuppressions`, available to rules as `context.Suppressions`.
+
+A rule folds every occurrence it finds into one `AnalysisIssue`, so suppression can't be a filter over
+finished issues: a comment on the first occurrence would hide all of them, and a new occurrence would
+hide behind an accepted one. So a rule that reports a line removes accepted occurrences itself, before
+it builds the issue - which also keeps the description, severity, and location right:
+
+```csharp
+findings.RemoveAll(f => context.Suppressions.IsSuppressed(Id, f.File, f.Line));
+```
+
+`ProjectAnalyzer` does the same for issues with no line. **A new rule that reports a line needs that
+call**; `EveryRuleThatReportsALine_AsksAboutItsOccurrences` fails without it. A rule that finds a
+pattern should report a line even if it could get away without one: without a line, its baseline entry
+matches its description, and a fixed description would hide every future occurrence.
+
 ## Custom rules
 
 `aspireforge rules list` prints the full catalog (id, category, short name) from the same source

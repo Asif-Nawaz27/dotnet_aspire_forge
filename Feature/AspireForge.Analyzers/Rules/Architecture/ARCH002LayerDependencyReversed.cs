@@ -47,6 +47,8 @@ public sealed class ARCH002LayerDependencyReversed : IAnalysisRule
             }
         }
 
+        violations.RemoveAll(f => context.Suppressions.IsSuppressed(Id, f.ProjectFile, f.Line));
+
         if (violations.Count == 0)
         {
             return Task.FromResult<AnalysisIssue?>(null);

@@ -126,6 +126,10 @@ Full command reference: [`new`](docs/commands/new.md) · [`add`](docs/commands/a
 [`update`](docs/commands/update.md). Rules can be tuned per project via
 [`.aspireforge/config.json`](docs/architecture/rule-engine.md#configuration).
 
+Already have findings? `aspireforge doctor --update-baseline` accepts what's there today, so CI can
+fail on anything new, and `// aspireforge-disable-next-line SEC010: why` accepts a single occurrence.
+Both stay visible in the report ([details](docs/commands/doctor.md#accepting-findings)).
+
 ## Supported rules
 
 | ID | Category | Checks for | Default severity |

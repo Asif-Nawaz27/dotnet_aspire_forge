@@ -87,6 +87,8 @@ public sealed partial class DEP004PrereleasePackages : IAnalysisRule
             .ThenBy(f => f.Package, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
+        findings.RemoveAll(f => context.Suppressions.IsSuppressed(Id, f.File, f.Line));
+
         if (findings.Count == 0)
         {
             return Task.FromResult<AnalysisIssue?>(null);

@@ -91,6 +91,16 @@ static Command BuildDoctorCommand()
         Description = "Show only the checklist and score - skip the per-finding details (where, why, fix, docs).",
     };
 
+    var updateBaselineOption = new Option<bool>("--update-baseline")
+    {
+        Description = "Accept every current finding by writing them to .aspireforge/baseline.json, so doctor reports only new ones.",
+    };
+
+    var noBaselineOption = new Option<bool>("--no-baseline")
+    {
+        Description = "Ignore .aspireforge/baseline.json for this run and report everything it accepts.",
+    };
+
     var command = new Command("doctor", "Analyze a project against AspireForge's rule set.")
     {
         pathArgument,
@@ -98,6 +108,8 @@ static Command BuildDoctorCommand()
         formatOption,
         vulnerableOption,
         summaryOption,
+        updateBaselineOption,
+        noBaselineOption,
     };
 
     command.SetAction((parseResult, cancellationToken) => new DoctorCommand(new ConsoleRenderer())
@@ -107,6 +119,8 @@ static Command BuildDoctorCommand()
             parseResult.GetValue(formatOption),
             parseResult.GetValue(vulnerableOption),
             parseResult.GetValue(summaryOption),
+            parseResult.GetValue(updateBaselineOption),
+            parseResult.GetValue(noBaselineOption),
             cancellationToken));
 
     return command;

@@ -107,6 +107,8 @@ public sealed class ARCH003InnerLayerFrameworkDependency : IAnalysisRule
             }
         }
 
+        findings.RemoveAll(f => context.Suppressions.IsSuppressed(Id, f.File, f.Line));
+
         if (findings.Count == 0)
         {
             return Task.FromResult<AnalysisIssue?>(null);
