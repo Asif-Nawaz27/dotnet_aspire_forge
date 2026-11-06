@@ -71,6 +71,8 @@ public sealed partial class SEC002CorsPolicyAllowsUnrestrictedOrigins : IAnalysi
             }
         }
 
+        findings.RemoveAll(f => context.Suppressions.IsSuppressed(Id, f.File, f.Line));
+
         if (findings.Count == 0)
         {
             return null;

@@ -83,6 +83,8 @@ public sealed partial class ARCH001ApiDirectlyAccessesPersistenceLayer : IAnalys
 
         var usages = await FindDbContextUsagesAsync(ownFiles, cancellationToken);
 
+        usages.RemoveAll(f => context.Suppressions.IsSuppressed(Id, f.File, f.Line));
+
         if (usages.Count == 0)
         {
             return null;

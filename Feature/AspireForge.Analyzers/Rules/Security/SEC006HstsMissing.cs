@@ -51,6 +51,11 @@ public sealed partial class SEC006HstsMissing : IAnalysisRule
 
         if (developmentOnly is { } location)
         {
+            if (context.Suppressions.IsSuppressed(Id, location.File, location.Line))
+            {
+                return null;
+            }
+
             return new AnalysisIssue(
                 Id,
                 Title,

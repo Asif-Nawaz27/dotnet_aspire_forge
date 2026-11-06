@@ -2,15 +2,17 @@ using AspireForge.Core.Analysis;
 
 namespace AspireForge.Analyzers;
 
-public class ProjectAnalyzer(IEnumerable<IAnalysisRule> rules) : IProjectAnalyzer
+public class ProjectAnalyzer(IEnumerable<IAnalysisRule> rules, IFindingSuppressions? suppressions = null)
+    : IProjectAnalyzer
 {
     private readonly IReadOnlyList<IAnalysisRule> _rules = rules.ToList();
+    private readonly IFindingSuppressions _suppressions = suppressions ?? NoFindingSuppressions.Instance;
 
     public async Task<AnalysisResult> AnalyzeAsync(
         string path,
         CancellationToken cancellationToken = default)
     {
-        var context = BuildProjectContext(path);
+        var context = BuildProjectContext(path) with { Suppressions = _suppressions };
         var rules = LoadRules();
         var issues = await ExecuteRules(rules, context, cancellationToken);
 
@@ -29,7 +31,12 @@ public class ProjectAnalyzer(IEnumerable<IAnalysisRule> rules) : IProjectAnalyze
         var results = await Task.WhenAll(
             rules.Select(rule => rule.EvaluateAsync(context, cancellationToken)));
 
-        return results.Where(issue => issue is not null).Select(issue => issue!).ToList();
+        // Occurrences with a line were already handled by the rule that found them; only it can see each one.
+        return results
+            .Where(issue => issue is not null)
+            .Select(issue => issue!)
+            .Where(issue => issue.LineNumber is not null || !context.Suppressions.IsSuppressed(issue))
+            .ToList();
     }
 
     private static AnalysisResult ReturnAnalysisResult(

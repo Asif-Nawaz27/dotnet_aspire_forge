@@ -7,6 +7,7 @@ what's missing.
 
 ```bash
 aspireforge doctor [<path>] [--fail-on <severity>] [--format <format>] [--vulnerable] [--summary]
+                   [--update-baseline] [--no-baseline]
 ```
 
 | Argument/Option | Description | Default |
@@ -16,6 +17,8 @@ aspireforge doctor [<path>] [--fail-on <severity>] [--format <format>] [--vulner
 | `--format` | Output format: `text`, `json`, or `sarif`. | `text` |
 | `--vulnerable` | Also scan packages, including transitive ones, for known security vulnerabilities ([DEP002](../rules/deployment.md#dep002---vulnerable-packages)). Runs `dotnet list package --vulnerable`, so it's slower and needs network access. | off |
 | `--summary` | Text output only: show the checklist, totals, and next steps, without the per-finding details. | off |
+| `--update-baseline` | Accept every current finding by writing them to `.aspireforge/baseline.json`, then exit `0` without printing the report. See [Adopting doctor on an existing project](#adopting-doctor-on-an-existing-project). | off |
+| `--no-baseline` | Ignore the baseline for this run and report everything it accepts. Inline suppressions still apply. | off |
 
 ## Text output (default)
 
@@ -143,7 +146,9 @@ aspireforge doctor --format json
       "severity": "warning",
       "title": "Authentication not configured"
     }
-  ]
+  ],
+  "suppressed": 0,
+  "baselined": 0
 }
 ```
 
@@ -177,6 +182,106 @@ aspireforge doctor --fail-on warning
 The printed report and JSON/SARIF payload are identical either way - `--fail-on` only changes the
 exit code decision, never what's reported.
 
+## Accepting findings
+
+There are three ways to stop a finding being reported. Pick the narrowest one that fits:
+
+| You want to... | Use | Applies to |
+| --- | --- | --- |
+| Accept one occurrence, with a reason | [an inline comment](#inline-suppressions) | one line |
+| Start using `doctor` on a project that already has findings | [a baseline](#adopting-doctor-on-an-existing-project) | everything found today, and nothing new |
+| Turn a rule off, or change its severity | [configuration](#configuration) | the whole rule |
+
+Accepted findings are never silently gone. The rule's checklist line shows `- <name>: accepted`
+instead of `✓` (when nothing else is left to report for it), the totals gain `Suppressed` and
+`Baselined` lines, and an `Accepted` section lists each one and why.
+
+They don't count towards `--fail-on` or the score, and the report says so right under the score:
+
+```
+Production Readiness: 10/10 (100/100)
+
+Not counted in the score: 1 suppressed inline, 4 baselined.
+Run with --no-baseline to see the score with baselined findings included.
+```
+
+The JSON report adds `suppressed` and `baselined` counts. SARIF only lists what's still reported.
+
+### Inline suppressions
+
+Put a comment on the line above the finding, or at the end of the line itself:
+
+```csharp
+// aspireforge-disable-next-line SEC010: self-signed certificate on the internal broker
+handler.ServerCertificateCustomValidationCallback = (_, _, _, _) => true;
+
+task.Wait(); // aspireforge-disable-line PERF003: runs once at startup, before the host accepts requests
+```
+
+The comment hides that occurrence only. If the rule finds the same problem elsewhere, those are still
+reported.
+
+- **Name the rule.** One or more IDs, separated by commas. A comment without an ID does nothing, so
+  it can't silence a whole line by accident.
+- **Give a reason.** It follows a colon and appears in the report. It's optional, but it's what a
+  reviewer will want to read.
+- **Every file a rule reports on works**, in that file's comment style:
+
+  ```dockerfile
+  # aspireforge-disable-next-line DEP003: base image is pinned by the platform team
+  FROM mcr.microsoft.com/dotnet/aspnet:latest
+  ```
+
+  ```xml
+  <!-- aspireforge-disable-next-line DEP004: no stable release yet -->
+  <PackageReference Include="Some.Package" Version="1.0.0-preview.1" />
+  ```
+
+  Comments in `appsettings.json` use `//`, which the ASP.NET Core configuration loader accepts.
+
+- **The comment has to touch the reported line**, the line shown under `Where`. For a call chain
+  spread over several lines, that's the line with the call, not the start of the statement.
+
+Findings about the project as a whole (`Scope  whole project`, such as a missing health check) have no
+line to put a comment on. Use the baseline or [configuration](#configuration) for those.
+
+### Adopting doctor on an existing project
+
+Fixing everything before `doctor` can gate your CI isn't realistic on a project that already has
+findings. A baseline accepts what's there today, so the build can fail on anything **new**:
+
+```bash
+aspireforge doctor --update-baseline
+git add .aspireforge/baseline.json
+```
+
+From then on, `doctor` reports only findings that aren't in the baseline:
+
+- **Moving code doesn't matter.** An entry matches the content of the line, not its number, so it
+  survives edits around it, re-indenting, and line-ending changes.
+- **New problems are still caught**, including an exact copy of an accepted line: each entry records
+  how many identical occurrences it covers, per file. Changing an accepted line makes it a new finding.
+- **Whole-project findings** match on their description. So if another package becomes vulnerable,
+  DEP002's description changes and the finding comes back.
+
+When you fix something, `doctor` tells you its entry is out of date:
+
+```
+1 baseline entry no longer matches anything. Run doctor --update-baseline to remove fixed findings for good.
+```
+
+Run that and commit the smaller file. Until you do, the old entry would accept that problem coming
+back. `--update-baseline` replaces entries only for rules that ran, so running it without
+`--vulnerable` keeps your accepted DEP002 findings.
+
+The baseline lives in the project's own directory, next to its project file, and covers one project.
+For a solution, run `doctor` on each project you want to gate. `--update-baseline` also accepts
+anything new that's there when you run it, so review the diff before committing.
+
+The file holds a short hash of each accepted line, not the line. Hashes can't be read back, but a weak
+secret on a hashed line could be guessed, so treat a finding about a real secret as something to fix
+rather than baseline.
+
 ## Configuration
 
 Rules can be enabled/disabled or have their severity overridden per project. See
@@ -188,4 +293,4 @@ Rules can be enabled/disabled or have their severity overridden per project. See
 |---|---|
 | `0` | No issue met the `--fail-on` threshold. |
 | `1` | At least one issue met the `--fail-on` threshold. |
-| `2` | The given path doesn't resolve to a project, or an invalid `--fail-on`/`--format` value was given. |
+| `2` | The given path doesn't resolve to a project, an invalid `--fail-on`/`--format` value was given, or `.aspireforge/baseline.json` can't be read. |

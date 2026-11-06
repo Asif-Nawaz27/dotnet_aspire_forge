@@ -1,6 +1,7 @@
 using System.Text.Json;
 using AspireForge.Analyzers;
 using AspireForge.Analyzers.Configuration;
+using AspireForge.Analyzers.Suppressions;
 using AspireForge.Cli.Output;
 using AspireForge.Core.Analysis;
 using AspireForge.Generators;
@@ -21,6 +22,8 @@ public class DoctorCommand(ConsoleRenderer renderer)
         OutputFormat format = OutputFormat.Text,
         bool scanVulnerablePackages = false,
         bool summaryOnly = false,
+        bool updateBaseline = false,
+        bool ignoreBaseline = false,
         CancellationToken cancellationToken = default)
     {
         ProjectContext context;
@@ -37,7 +40,27 @@ public class DoctorCommand(ConsoleRenderer renderer)
 
         var config = ConfigLoader.Load(context.RootDirectory);
         var rules = AnalysisRuleSet.ApplyConfig(AnalysisRuleSet.CreateDefault(scanVulnerablePackages), config);
-        var analyzer = new ProjectAnalyzer(rules);
+
+        if (updateBaseline)
+        {
+            await WriteBaselineAsync(path, context, rules, cancellationToken);
+            return ExitCodes.Success;
+        }
+
+        BaselineFile? baseline;
+
+        try
+        {
+            baseline = ignoreBaseline ? null : BaselineFile.Load(context.RootDirectory);
+        }
+        catch (InvalidDataException exception)
+        {
+            renderer.WriteLine(exception.Message);
+            return ExitCodes.InvalidConfiguration;
+        }
+
+        var suppressions = FindingSuppressions.Create(context.RootDirectory, baseline);
+        var analyzer = new ProjectAnalyzer(rules, suppressions);
         var rawResult = await analyzer.AnalyzeAsync(path, cancellationToken);
         var result = AnalysisRuleSet.ApplySeverityOverrides(rawResult, config);
 
@@ -46,7 +69,7 @@ public class DoctorCommand(ConsoleRenderer renderer)
         switch (format)
         {
             case OutputFormat.Json:
-                WriteJsonReport(result);
+                WriteJsonReport(result, suppressions.Accepted);
                 return shouldFail ? ExitCodes.AnalysisFoundErrors : ExitCodes.Success;
 
             case OutputFormat.Sarif:
@@ -54,17 +77,64 @@ public class DoctorCommand(ConsoleRenderer renderer)
                 return shouldFail ? ExitCodes.AnalysisFoundErrors : ExitCodes.Success;
         }
 
-        WriteTextReport(context, result, rules, showDetails: !summaryOnly);
+        WriteTextReport(context, result, rules, suppressions, showDetails: !summaryOnly);
 
         return shouldFail ? ExitCodes.AnalysisFoundErrors : ExitCodes.Success;
+    }
+
+    // Runs the rules once and accepts whatever they'd report. Entries for rules that didn't run are
+    // kept: `--update-baseline` without --vulnerable mustn't forget the accepted DEP002 findings.
+    private async Task WriteBaselineAsync(
+        string path, ProjectContext context, IReadOnlyList<IAnalysisRule> rules, CancellationToken cancellationToken)
+    {
+        var recorder = FindingSuppressions.Recording(context.RootDirectory);
+        await new ProjectAnalyzer(rules, recorder).AnalyzeAsync(path, cancellationToken);
+
+        var rulesThatRan = rules.Select(rule => rule.Id).ToHashSet();
+        var recorded = recorder.RecordedEntries;
+        var kept = ReadExistingBaseline(context.RootDirectory).Where(entry => !rulesThatRan.Contains(entry.RuleId));
+
+        new BaselineFile(BaselineFile.CurrentVersion, [.. kept, .. recorded]).Save(context.RootDirectory);
+
+        var total = recorded.Sum(entry => entry.Count);
+        var location = FindingFormatter.DisplayPath(BaselineFile.PathFor(context.RootDirectory), Directory.GetCurrentDirectory());
+
+        renderer.WriteLine($"Baseline written to {location}: {total} finding{(total == 1 ? string.Empty : "s")} accepted.");
+
+        foreach (var rule in recorded.GroupBy(entry => entry.RuleId).OrderBy(group => group.Key, StringComparer.Ordinal))
+        {
+            renderer.WriteLine($"  {rule.Key.PadRight(8)} {rule.Sum(entry => entry.Count)}");
+        }
+
+        renderer.WriteLine();
+        renderer.WriteLine("Commit this file. doctor now reports only findings that aren't in it.");
+    }
+
+    // A damaged baseline is being replaced anyway, so it shouldn't stop that from happening.
+    private static IReadOnlyList<BaselineEntry> ReadExistingBaseline(string projectDirectory)
+    {
+        try
+        {
+            return BaselineFile.Load(projectDirectory)?.Findings ?? [];
+        }
+        catch (InvalidDataException)
+        {
+            return [];
+        }
     }
 
     // The checklist (one line per enabled rule, grouped by category), then - unless --summary - a
     // block per finding with where it is, why it matters, how to fix it, and a link to the rule's docs.
     private void WriteTextReport(
-        ProjectContext context, AnalysisResult result, IReadOnlyList<IAnalysisRule> rules, bool showDetails)
+        ProjectContext context,
+        AnalysisResult result,
+        IReadOnlyList<IAnalysisRule> rules,
+        FindingSuppressions suppressions,
+        bool showDetails)
     {
         var issuesByRuleId = result.Issues.ToDictionary(issue => issue.RuleId);
+        var accepted = suppressions.Accepted;
+        var acceptedRuleIds = accepted.Select(finding => finding.RuleId).ToHashSet();
         var enabledRuleIds = rules.Select(rule => rule.Id).ToHashSet();
         var activeChecks = RuleCatalog.Entries.Where(check => enabledRuleIds.Contains(check.RuleId)).ToList();
         var currentDirectory = Directory.GetCurrentDirectory();
@@ -88,6 +158,13 @@ public class DoctorCommand(ConsoleRenderer renderer)
             {
                 if (!issuesByRuleId.TryGetValue(check.RuleId, out var issue))
                 {
+                    // Not a pass: the problem is still there, someone has only accepted it.
+                    if (acceptedRuleIds.Contains(check.RuleId))
+                    {
+                        renderer.WriteCheck("-", $"{check.ShortName}: accepted", check.RuleId);
+                        continue;
+                    }
+
                     renderer.WriteCheck("✓", check.PassedMessage);
                     passedCount++;
                     continue;
@@ -117,16 +194,53 @@ public class DoctorCommand(ConsoleRenderer renderer)
             WriteFindings(context, result, rules, activeChecks, fixableRuleIds, currentDirectory);
         }
 
+        if (showDetails && accepted.Count > 0)
+        {
+            WriteAccepted(accepted, currentDirectory);
+        }
+
         renderer.WriteLine();
         renderer.WriteSeparator();
         renderer.WriteLine($"Errors:      {errorCount}");
         renderer.WriteLine($"Warnings:    {warningCount}");
         renderer.WriteLine($"Suggestions: {suggestionCount}");
         renderer.WriteLine($"Passed:      {passedCount}");
+
+        var inlineCount = accepted.Count(finding => finding.By == AcceptedBy.InlineComment);
+        var baselinedCount = accepted.Count - inlineCount;
+
+        if (accepted.Count > 0)
+        {
+            renderer.WriteLine($"Suppressed:  {inlineCount}");
+            renderer.WriteLine($"Baselined:   {baselinedCount}");
+        }
+
         renderer.WriteSeparator();
         renderer.WriteLine();
 
         WriteScore(result, activeChecks);
+
+        // After the score rather than in it: the score is only as good as what was accepted, so it has
+        // to say so right there.
+        if (accepted.Count > 0)
+        {
+            renderer.WriteLine();
+            renderer.WriteLine($"Not counted in the score: {inlineCount} suppressed inline, {baselinedCount} baselined.");
+
+            if (baselinedCount > 0)
+            {
+                renderer.WriteLine("Run with --no-baseline to see the score with baselined findings included.");
+            }
+        }
+
+        var unmatched = suppressions.UnmatchedBaselineCount(rules.Select(rule => rule.Id).ToHashSet());
+
+        if (unmatched > 0)
+        {
+            renderer.WriteLine();
+            renderer.WriteLine($"{unmatched} baseline {(unmatched == 1 ? "entry no longer matches" : "entries no longer match")} anything. "
+                + "Run doctor --update-baseline to remove fixed findings for good.");
+        }
 
         if (result.Issues.Count == 0)
         {
@@ -244,14 +358,36 @@ public class DoctorCommand(ConsoleRenderer renderer)
         }
     }
 
-    private void WriteJsonReport(AnalysisResult result)
+    // What was left out of the report and why, so accepting a finding never makes it disappear.
+    private void WriteAccepted(IReadOnlyList<AcceptedFinding> accepted, string currentDirectory)
+    {
+        renderer.WriteLine();
+        renderer.WriteBanner($"Accepted ({accepted.Count})");
+        renderer.WriteLine();
+
+        foreach (var finding in accepted)
+        {
+            var location = finding.File is null
+                ? "whole project"
+                : $"{FindingFormatter.DisplayPath(finding.File, currentDirectory)}:{finding.Line}";
+            var how = finding.By == AcceptedBy.Baseline
+                ? "baselined"
+                : $"suppressed: {finding.Reason ?? "no reason given"}";
+
+            renderer.WriteLine($"  {finding.RuleId.PadRight(8)} {location} - {how}");
+        }
+    }
+
+    private void WriteJsonReport(AnalysisResult result, IReadOnlyList<AcceptedFinding> accepted)
     {
         var report = new DoctorJsonReport(
             result.ProjectName,
             result.Issues
                 .Select(issue => new DoctorJsonIssue(
                     issue.RuleId, issue.Severity.ToString().ToLowerInvariant(), issue.Title))
-                .ToList());
+                .ToList(),
+            accepted.Count(finding => finding.By == AcceptedBy.InlineComment),
+            accepted.Count(finding => finding.By == AcceptedBy.Baseline));
 
         renderer.WriteLine(JsonSerializer.Serialize(report, JsonOptions));
     }

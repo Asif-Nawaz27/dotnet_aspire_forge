@@ -42,6 +42,8 @@ public sealed partial class DEP003ContainerProblems : IAnalysisRule
         var instructions = Parse(await File.ReadAllLinesAsync(dockerfile, cancellationToken));
         var findings = Review(instructions, Path.GetDirectoryName(dockerfile)!);
 
+        findings.RemoveAll(f => context.Suppressions.IsSuppressed(Id, dockerfile, f.Line));
+
         if (findings.Count == 0)
         {
             return null;

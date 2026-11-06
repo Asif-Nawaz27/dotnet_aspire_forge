@@ -1,6 +1,6 @@
 namespace AspireForge.Core.Analysis;
 
-public sealed class ProjectContext
+public sealed record ProjectContext
 {
     public required string RootDirectory { get; init; }
 
@@ -21,4 +21,7 @@ public sealed class ProjectContext
     public required IReadOnlyCollection<string> ProjectReferences { get; init; }
 
     public required IReadOnlyCollection<string> PackageReferences { get; init; }
+
+    // Rules ask this about each occurrence they find - see IFindingSuppressions.
+    public IFindingSuppressions Suppressions { get; init; } = NoFindingSuppressions.Instance;
 }

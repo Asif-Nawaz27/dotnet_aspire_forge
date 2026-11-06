@@ -155,6 +155,196 @@ public class DoctorCommandTests : IDisposable
             issue => issue.GetProperty("ruleId").GetString() == "SEC001");
     }
 
+    private const string Cors = "var builder = WebApplication.CreateBuilder(args);\npolicy.AllowAnyOrigin();\n";
+
+    private string ProgramFile => Path.Combine(_projectDirectory, "Program.cs");
+
+    private string BaselineFilePath => Path.Combine(_projectDirectory, ".aspireforge", "baseline.json");
+
+    private async Task<(int ExitCode, string Output)> Doctor(
+        OutputFormat format = OutputFormat.Text,
+        bool updateBaseline = false,
+        bool ignoreBaseline = false,
+        bool summaryOnly = false)
+    {
+        var writer = new StringWriter();
+        var exitCode = await new DoctorCommand(new ConsoleRenderer(writer)).RunAsync(
+            _projectDirectory,
+            format: format,
+            updateBaseline: updateBaseline,
+            ignoreBaseline: ignoreBaseline,
+            summaryOnly: summaryOnly);
+
+        return (exitCode, writer.ToString());
+    }
+
+    [Fact]
+    public async Task InlineSuppression_ClearsTheFailure_AndTheReportSaysWhy()
+    {
+        File.WriteAllText(ProgramFile, Cors);
+        Assert.Equal(ExitCodes.AnalysisFoundErrors, (await Doctor()).ExitCode);
+
+        File.WriteAllText(
+            ProgramFile,
+            "var builder = WebApplication.CreateBuilder(args);\n"
+                + "// aspireforge-disable-next-line SEC002: public read-only API\npolicy.AllowAnyOrigin();\n");
+
+        var (exitCode, output) = await Doctor();
+
+        Assert.Equal(ExitCodes.Success, exitCode);
+        Assert.Contains("Accepted (1)", output);
+        Assert.Contains("SEC002", output);
+        Assert.Contains("suppressed: public read-only API", output);
+        Assert.Contains("Not counted in the score: 1 suppressed inline, 0 baselined.", output);
+    }
+
+    // An accepted problem is still a problem; a tick would say it isn't there.
+    [Fact]
+    public async Task AcceptedRule_IsNotShownAsPassed()
+    {
+        File.WriteAllText(ProgramFile, Cors);
+        await Doctor(updateBaseline: true);
+
+        var (_, output) = await Doctor();
+
+        Assert.DoesNotContain("CORS policy restricts origins", output);
+        Assert.Matches(@"- CORS: accepted\s+SEC002", output);
+    }
+
+    [Fact]
+    public async Task UpdateBaseline_WritesTheFile_AndReportsWhatItAccepted()
+    {
+        File.WriteAllText(ProgramFile, Cors);
+
+        var (exitCode, output) = await Doctor(updateBaseline: true);
+
+        Assert.Equal(ExitCodes.Success, exitCode);
+        Assert.True(File.Exists(BaselineFilePath));
+        Assert.Contains("Baseline written to", output);
+        Assert.Matches(@"SEC002\s+1", output);
+    }
+
+    [Fact]
+    public async Task Baseline_LetsCiPass_UntilANewFindingAppears()
+    {
+        File.WriteAllText(ProgramFile, Cors);
+        await Doctor(updateBaseline: true);
+
+        Assert.Equal(ExitCodes.Success, (await Doctor()).ExitCode);
+
+        File.WriteAllText(ProgramFile, Cors + "other.AllowAnyOrigin();\n");
+
+        var (exitCode, output) = await Doctor();
+
+        Assert.Equal(ExitCodes.AnalysisFoundErrors, exitCode);
+        Assert.Contains("Program.cs:3", output);
+    }
+
+    [Fact]
+    public async Task NoBaseline_ReportsEverythingTheBaselineAccepts()
+    {
+        File.WriteAllText(ProgramFile, Cors);
+        await Doctor(updateBaseline: true);
+
+        var (exitCode, output) = await Doctor(ignoreBaseline: true);
+
+        Assert.Equal(ExitCodes.AnalysisFoundErrors, exitCode);
+        Assert.DoesNotContain("Accepted (", output);
+        Assert.Contains("SEC002", output);
+    }
+
+    // The score leaves baselined findings out, so it must say so next to the number.
+    [Fact]
+    public async Task Baseline_IsDisclosedNextToTheScore()
+    {
+        File.WriteAllText(ProgramFile, Cors);
+        await Doctor(updateBaseline: true);
+
+        var (_, output) = await Doctor(summaryOnly: true);
+
+        Assert.Contains("Production Readiness: 10/10 (100/100)", output);
+        Assert.Matches(@"Not counted in the score: 0 suppressed inline, \d+ baselined\.", output);
+        Assert.Contains("--no-baseline", output);
+        Assert.DoesNotContain("Accepted (", output);
+    }
+
+    [Fact]
+    public async Task Baseline_SaysWhenAnEntryNoLongerMatches()
+    {
+        File.WriteAllText(ProgramFile, Cors);
+        await Doctor(updateBaseline: true);
+
+        File.WriteAllText(ProgramFile, "var builder = WebApplication.CreateBuilder(args);\n");
+
+        var (_, output) = await Doctor();
+
+        Assert.Contains("1 baseline entry no longer matches anything.", output);
+    }
+
+    // Without --vulnerable DEP002 doesn't run, so its entries can't be judged - or dropped.
+    [Fact]
+    public async Task UpdateBaseline_KeepsEntriesForRulesThatDidNotRun()
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(BaselineFilePath)!);
+        File.WriteAllText(
+            BaselineFilePath,
+            """{ "version": 1, "findings": [{ "ruleId": "DEP002", "file": "Sample.csproj", "fingerprint": "abc", "count": 1 }] }""");
+
+        await Doctor(updateBaseline: true);
+
+        Assert.Contains("DEP002", File.ReadAllText(BaselineFilePath));
+    }
+
+    [Fact]
+    public async Task UpdateBaseline_ReplacesEntriesForRulesThatRan()
+    {
+        File.WriteAllText(ProgramFile, Cors);
+        await Doctor(updateBaseline: true);
+        var original = File.ReadAllText(BaselineFilePath);
+
+        File.WriteAllText(ProgramFile, "var builder = WebApplication.CreateBuilder(args);\n");
+        await Doctor(updateBaseline: true);
+
+        Assert.Contains("SEC002", original);
+        Assert.DoesNotContain("SEC002", File.ReadAllText(BaselineFilePath));
+    }
+
+    [Fact]
+    public async Task DamagedBaseline_StopsWithAClearMessage()
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(BaselineFilePath)!);
+        File.WriteAllText(BaselineFilePath, "not json");
+
+        var (exitCode, output) = await Doctor();
+
+        Assert.Equal(ExitCodes.InvalidConfiguration, exitCode);
+        Assert.Contains("isn't valid JSON", output);
+    }
+
+    [Fact]
+    public async Task UpdateBaseline_RepairsADamagedBaseline()
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(BaselineFilePath)!);
+        File.WriteAllText(BaselineFilePath, "not json");
+
+        Assert.Equal(ExitCodes.Success, (await Doctor(updateBaseline: true)).ExitCode);
+        Assert.Equal(ExitCodes.Success, (await Doctor()).ExitCode);
+    }
+
+    [Fact]
+    public async Task JsonReport_CountsWhatWasAccepted()
+    {
+        File.WriteAllText(ProgramFile, Cors);
+        await Doctor(updateBaseline: true);
+        File.AppendAllText(ProgramFile, "other.AllowAnyOrigin(); // aspireforge-disable-line SEC002\n");
+
+        var (_, output) = await Doctor(format: OutputFormat.Json);
+
+        using var document = JsonDocument.Parse(output);
+        Assert.Equal(1, document.RootElement.GetProperty("suppressed").GetInt32());
+        Assert.True(document.RootElement.GetProperty("baselined").GetInt32() >= 1);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_projectDirectory))

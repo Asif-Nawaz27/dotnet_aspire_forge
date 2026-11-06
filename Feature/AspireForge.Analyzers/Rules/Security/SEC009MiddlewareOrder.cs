@@ -60,6 +60,8 @@ public sealed class SEC009MiddlewareOrder : IAnalysisRule
             }
         }
 
+        violations.RemoveAll(f => context.Suppressions.IsSuppressed(Id, f.File, f.Line));
+
         if (violations.Count == 0)
         {
             return null;

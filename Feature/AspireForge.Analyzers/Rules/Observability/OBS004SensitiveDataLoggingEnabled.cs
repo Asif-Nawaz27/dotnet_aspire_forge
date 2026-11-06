@@ -46,6 +46,8 @@ public sealed partial class OBS004SensitiveDataLoggingEnabled : IAnalysisRule
             }
         }
 
+        findings.RemoveAll(f => context.Suppressions.IsSuppressed(Id, f.File, f.Line));
+
         if (findings.Count == 0)
         {
             return null;

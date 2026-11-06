@@ -67,6 +67,8 @@ public sealed partial class OBS007VerboseLoggingByDefault : IAnalysisRule
             }
         }
 
+        findings.RemoveAll(f => context.Suppressions.IsSuppressed(Id, f.File, f.Line));
+
         if (findings.Count == 0)
         {
             return null;
