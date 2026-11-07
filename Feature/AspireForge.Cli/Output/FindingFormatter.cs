@@ -106,7 +106,7 @@ public static class FindingFormatter
     }
 
     // No line, and the "location" is just the analysed project's own .csproj (or nothing at all).
-    private static bool IsProjectWide(AnalysisIssue issue, string projectFile) =>
+    public static bool IsProjectWide(AnalysisIssue issue, string projectFile) =>
         issue.LineNumber is null
         && (string.IsNullOrEmpty(issue.FilePath)
             || string.Equals(Path.GetFullPath(issue.FilePath), Path.GetFullPath(projectFile), StringComparison.OrdinalIgnoreCase));

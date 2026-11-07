@@ -34,7 +34,7 @@ generation:
 | `.gitignore` | Fixed template for a multi-project .NET solution. |
 | `Dockerfile`, `.dockerignore` | Fixed template for the generated `Api` project. |
 | `docker-compose.yml` | Regenerated from scratch, aware of whichever databases/caches are already configured (reads `appsettings.json` connection strings) - the same logic [`add docker`](add.md) uses. |
-| `.github/workflows/ci.yml` | Fixed CI template (restore/build/test on push to `main`). |
+| `.github/workflows/ci.yml` | Fixed [CI template](new.md#ci-workflow) (restore, build, test, and `doctor`), pinned to the running AspireForge version. |
 
 Each file is fully overwritten, not merged - useful for pulling in a newer AspireForge template, or
 restoring a scaffolding file that got deleted or hand-edited into a broken state.

@@ -14,7 +14,7 @@ aspireforge doctor [<path>] [--fail-on <severity>] [--format <format>] [--vulner
 |---|---|---|
 | `<path>` | A project file, or a directory containing exactly one. | current directory |
 | `--fail-on` | The minimum issue severity that causes a non-zero exit code: `info`, `suggestion`, `warning`, `error`, or `critical`. | `error` |
-| `--format` | Output format: `text`, `json`, or `sarif`. | `text` |
+| `--format` | Output format: `text`, `json`, `sarif`, or `markdown`. | `text` |
 | `--vulnerable` | Also scan packages, including transitive ones, for known security vulnerabilities ([DEP002](../rules/deployment.md#dep002---vulnerable-packages)). Runs `dotnet list package --vulnerable`, so it's slower and needs network access. | off |
 | `--summary` | Text output only: show the checklist, totals, and next steps, without the per-finding details. | off |
 | `--update-baseline` | Accept every current finding by writing them to `.aspireforge/baseline.json`, then exit `0` without printing the report. See [Adopting doctor on an existing project](#adopting-doctor-on-an-existing-project). | off |
@@ -166,10 +166,28 @@ GitHub code scanning:
   run: aspireforge doctor --format sarif > results.sarif
 
 - name: Upload results
-  uses: github/codeql-action/upload-sarif@v3
+  uses: github/codeql-action/upload-sarif@v4
   with:
     sarif_file: results.sarif
 ```
+
+## Markdown output
+
+```bash
+aspireforge doctor --format markdown
+```
+
+Produces a report for a GitHub job summary or a pull request comment: the score and totals, a table of
+findings linking to each rule's docs, the reasons and fixes in a collapsed section, and everything
+that was [accepted](#accepting-findings), so a passing build still shows what was left out.
+
+```yaml
+- name: Doctor summary
+  run: aspireforge doctor --format markdown >> "$GITHUB_STEP_SUMMARY" || true
+```
+
+The exit code works as it does for every format, so `|| true` is what stops this step failing the
+build. Projects from [`aspireforge new`](new.md#ci-workflow) get this set up already.
 
 ## Failing a CI pipeline on warnings
 
@@ -179,7 +197,7 @@ By default only `error`/`critical` issues cause a non-zero exit code. To also fa
 aspireforge doctor --fail-on warning
 ```
 
-The printed report and JSON/SARIF payload are identical either way - `--fail-on` only changes the
+The printed report and JSON/SARIF/Markdown payload are identical either way - `--fail-on` only changes the
 exit code decision, never what's reported.
 
 ## Accepting findings

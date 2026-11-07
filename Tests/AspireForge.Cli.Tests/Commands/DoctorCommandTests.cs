@@ -332,6 +332,32 @@ public class DoctorCommandTests : IDisposable
     }
 
     [Fact]
+    public async Task MarkdownReport_ReportsFindings_AndKeepsTheExitCode()
+    {
+        File.WriteAllText(ProgramFile, Cors);
+
+        var (exitCode, output) = await Doctor(format: OutputFormat.Markdown);
+
+        Assert.Equal(ExitCodes.AnalysisFoundErrors, exitCode);
+        Assert.StartsWith("## AspireForge Doctor: Sample", output);
+        Assert.Contains("[SEC002](", output);
+        Assert.DoesNotContain("Findings (0)", output);
+    }
+
+    [Fact]
+    public async Task MarkdownReport_ShowsTheBaseline()
+    {
+        File.WriteAllText(ProgramFile, Cors);
+        await Doctor(updateBaseline: true);
+
+        var (exitCode, output) = await Doctor(format: OutputFormat.Markdown);
+
+        Assert.Equal(ExitCodes.Success, exitCode);
+        Assert.Contains("### Accepted (", output);
+        Assert.Matches(@"> Not counted in the score: 0 suppressed inline, \d+ baselined\.", output);
+    }
+
+    [Fact]
     public async Task JsonReport_CountsWhatWasAccepted()
     {
         File.WriteAllText(ProgramFile, Cors);

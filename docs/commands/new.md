@@ -70,6 +70,23 @@ What makes it pass:
 The rate limit partitions by client IP address. Behind a reverse proxy, configure forwarded headers
 so it sees the real client rather than the proxy - or adjust or remove the limiter in `Program.cs`.
 
+## CI workflow
+
+`.github/workflows/ci.yml` restores, builds, and tests the solution on pushes and pull requests to
+`main`, then runs [`doctor`](doctor.md) on `<name>.Api`:
+
+| Step | What it does | Can it fail the build? |
+| --- | --- | --- |
+| Install AspireForge | Installs the exact version that generated the project, so CI's rules only change when you change that line. | Yes |
+| Doctor summary | Writes the [Markdown report](doctor.md#markdown-output) to the job summary page. | No |
+| Doctor SARIF, Upload to code scanning | Shows findings as code scanning alerts. Needs GitHub Advanced Security on a private repository; without it the upload fails and the build carries on. | No |
+| Doctor | The check itself, with the full report in the job log. Fails on `error` and `critical` findings. | Yes |
+
+A new project passes: its one finding, SEC001, is a warning. To be stricter, add `--fail-on warning`
+to the last step. If that fails on findings you can't fix yet, accept them with a
+[baseline](doctor.md#adopting-doctor-on-an-existing-project), which goes in `src/<name>.Api/.aspireforge/`,
+and CI will fail on new findings only.
+
 ## Example
 
 ```bash

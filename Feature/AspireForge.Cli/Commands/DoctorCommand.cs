@@ -75,6 +75,17 @@ public class DoctorCommand(ConsoleRenderer renderer)
             case OutputFormat.Sarif:
                 WriteSarifReport(result, rules);
                 return shouldFail ? ExitCodes.AnalysisFoundErrors : ExitCodes.Success;
+
+            case OutputFormat.Markdown:
+                renderer.WriteLine(MarkdownReportBuilder.Build(
+                    context,
+                    result,
+                    rules,
+                    suppressions.Accepted,
+                    suppressions.UnmatchedBaselineCount(rules.Select(rule => rule.Id).ToHashSet()),
+                    RuleFixSet.CreateDefault().Select(fix => fix.RuleId).ToHashSet(StringComparer.OrdinalIgnoreCase),
+                    Directory.GetCurrentDirectory()));
+                return shouldFail ? ExitCodes.AnalysisFoundErrors : ExitCodes.Success;
         }
 
         WriteTextReport(context, result, rules, suppressions, showDetails: !summaryOnly);
