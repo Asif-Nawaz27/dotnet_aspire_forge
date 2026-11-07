@@ -47,12 +47,24 @@ grow in, but isn't supported yet.
 Regardless of layout, you can run `doctor` in CI against any project:
 
 ```yaml
-- name: AspireForge doctor
+- name: Install AspireForge
   run: |
     dotnet tool install --global AspireForge
-    aspireforge doctor path/to/YourApi --format sarif > results.sarif
+    echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
 
-- uses: github/codeql-action/upload-sarif@v3
+- name: Doctor SARIF
+  run: aspireforge doctor path/to/YourApi --format sarif > results.sarif || true
+
+- uses: github/codeql-action/upload-sarif@v4
+  continue-on-error: true
   with:
     sarif_file: results.sarif
+
+- name: Doctor
+  run: aspireforge doctor path/to/YourApi
 ```
+
+Uploading needs `permissions: security-events: write` on the job. See
+[CI workflow](../commands/new.md#ci-workflow) for what each step is for, and
+[Adopting doctor on an existing project](../commands/doctor.md#adopting-doctor-on-an-existing-project)
+to fail on new findings only.
