@@ -23,7 +23,6 @@
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>aspireforge</ToolCommandName>
     <PackageId>AspireForge</PackageId>
-    <Version>0.1.0</Version>
     <Authors>Muhammad Asif Nawaz</Authors>
     <Description>Opinionated .NET Aspire project scaffolding and analysis CLI.</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
