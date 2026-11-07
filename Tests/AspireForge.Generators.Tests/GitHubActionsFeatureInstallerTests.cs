@@ -67,6 +67,54 @@ public class GitHubActionsFeatureInstallerTests : IDisposable
     }
 
     [Fact]
+    public async Task InstallAsync_TheWorkflowPinsTheToolToTheVersionThatGeneratedIt()
+    {
+        var content = await GenerateWorkflow();
+
+        Assert.Contains($"dotnet tool install --global AspireForge --version {ToolVersion.Current}", content);
+        Assert.Contains("echo \"$HOME/.dotnet/tools\" >> \"$GITHUB_PATH\"", content);
+    }
+
+    // Regression guard in the spirit of the .slnx test above: the path must be a directory `new` creates.
+    [Fact]
+    public async Task InstallAsync_RunsDoctorAgainstTheApiProjectThatActuallyExists()
+    {
+        var content = await GenerateWorkflow();
+        var api = Path.Combine(_outputPath, "SampleApi", "src", "SampleApi.Api");
+
+        Assert.True(File.Exists(Path.Combine(api, "SampleApi.Api.csproj")));
+        Assert.Contains("aspireforge doctor src/SampleApi.Api --format markdown >> \"$GITHUB_STEP_SUMMARY\" || true", content);
+        Assert.Contains("aspireforge doctor src/SampleApi.Api --format sarif > doctor.sarif || true", content);
+    }
+
+    // Only the last step may fail the build, and it has to run last: a failure there would otherwise
+    // skip the summary and upload, which are most useful exactly when doctor finds something.
+    [Fact]
+    public async Task InstallAsync_TheDoctorCheckIsTheLastStep_AndTheOnlyOneThatCanFail()
+    {
+        var content = await GenerateWorkflow();
+        var lines = content.ReplaceLineEndings("\n").TrimEnd().Split('\n');
+
+        Assert.Equal("run: aspireforge doctor src/SampleApi.Api", lines[^1].Trim());
+        Assert.Equal(
+            2,
+            lines.Count(line => line.Contains("aspireforge doctor", StringComparison.Ordinal) && line.EndsWith("|| true", StringComparison.Ordinal)));
+    }
+
+    [Fact]
+    public async Task InstallAsync_AFailedSarifUpload_DoesNotFailTheBuild()
+    {
+        var content = await GenerateWorkflow();
+        var lines = content.ReplaceLineEndings("\n").Split('\n').Select(line => line.Trim()).ToList();
+        var upload = lines.FindIndex(line => line.StartsWith("uses: github/codeql-action/upload-sarif@", StringComparison.Ordinal));
+
+        Assert.True(upload >= 0);
+        Assert.Equal("continue-on-error: true", lines[upload + 1]);
+        Assert.Contains("security-events: write", content);
+        Assert.Contains("contents: read", content);
+    }
+
+    [Fact]
     public async Task InstallAsync_IsIdempotent_SoUpdateCanSafelyReRunIt()
     {
         var context = Generate("SampleApi");
@@ -85,6 +133,15 @@ public class GitHubActionsFeatureInstallerTests : IDisposable
         var installer = new GitHubActionsFeatureInstaller();
 
         Assert.Equal("github-actions", installer.Feature.Id);
+    }
+
+    private async Task<string> GenerateWorkflow()
+    {
+        var context = Generate("SampleApi");
+
+        await new GitHubActionsFeatureInstaller().InstallAsync(context);
+
+        return await File.ReadAllTextAsync(Path.Combine(context.RootPath, ".github", "workflows", "ci.yml"));
     }
 
     private FeatureContext Generate(string projectName)
