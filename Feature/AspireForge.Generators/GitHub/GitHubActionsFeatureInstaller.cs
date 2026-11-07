@@ -8,7 +8,7 @@ public sealed class GitHubActionsFeatureInstaller : IFeatureInstaller
     {
         Id = "github-actions",
         Name = "GitHub Actions CI",
-        Description = "Adds a workflow that restores, builds, and tests the solution on push and pull request.",
+        Description = "Adds a workflow that restores, builds, tests, and runs doctor on push and pull request.",
     };
 
     public async Task<IReadOnlyList<string>> InstallAsync(
