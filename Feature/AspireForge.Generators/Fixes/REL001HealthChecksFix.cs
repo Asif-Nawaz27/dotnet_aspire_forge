@@ -1,4 +1,3 @@
-using AspireForge.Core.Features;
 using AspireForge.Core.Fixes;
 using AspireForge.Generators.Project;
 
@@ -10,16 +9,19 @@ public sealed class REL001HealthChecksFix : IRuleFix
 
     public string Description => "Adds health checks (AddHealthChecks/MapHealthChecks) directly to the Api.";
 
-    public Task<IReadOnlyList<string>> ApplyAsync(FeatureContext context, CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<string>> ApplyAsync(FixWorkspace workspace, CancellationToken cancellationToken = default)
     {
-        var programCsPath = Path.Combine(CleanArchitectureLayout.ApiProjectPath(context), "Program.cs");
+        var programCsPath = Path.Combine(CleanArchitectureLayout.ApiProjectPath(workspace.Context), "Program.cs");
 
-        ProgramFileEditor.AddUsingsAndServiceRegistration(
-            programCsPath,
-            usings: [],
-            serviceRegistrationLines: ["builder.Services.AddHealthChecks();"]);
+        workspace.Edit(programCsPath, lines =>
+        {
+            ProgramFileEditor.AddUsingsAndServiceRegistration(
+                lines,
+                usings: [],
+                serviceRegistrationLines: ["builder.Services.AddHealthChecks();"]);
 
-        ProgramFileEditor.InsertBeforeAppRun(programCsPath, ["app.MapHealthChecks(\"/health\");"]);
+            ProgramFileEditor.InsertBeforeAppRun(lines, ["app.MapHealthChecks(\"/health\");"]);
+        });
 
         return Task.FromResult<IReadOnlyList<string>>(
             ["Added builder.Services.AddHealthChecks()", "Added app.MapHealthChecks(\"/health\")"]);

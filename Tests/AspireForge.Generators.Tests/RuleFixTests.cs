@@ -1,4 +1,5 @@
 using AspireForge.Core.Features;
+using AspireForge.Core.Fixes;
 using AspireForge.Core.Generation;
 using AspireForge.Generators.Fixes;
 using AspireForge.Generators.Project;
@@ -15,7 +16,7 @@ public class RuleFixTests : IDisposable
         var context = Generate("SampleApi");
         var programCsPath = ProgramCsPath(context);
 
-        await new REL001HealthChecksFix().ApplyAsync(context);
+        await Apply(context, new REL001HealthChecksFix());
 
         var content = File.ReadAllText(programCsPath);
         Assert.Contains("builder.Services.AddHealthChecks();", content);
@@ -33,7 +34,7 @@ public class RuleFixTests : IDisposable
         File.WriteAllLines(programCsPath, File.ReadAllLines(programCsPath).Where(line => !line.Contains("UseHttpsRedirection")));
         Assert.DoesNotContain("UseHttpsRedirection", File.ReadAllText(programCsPath));
 
-        await new SEC003HttpsRedirectionFix().ApplyAsync(context);
+        await Apply(context, new SEC003HttpsRedirectionFix());
 
         Assert.Contains("app.UseHttpsRedirection();", File.ReadAllText(programCsPath));
     }
@@ -43,10 +44,21 @@ public class RuleFixTests : IDisposable
     {
         var context = Generate("SampleApi");
 
-        await new REL001HealthChecksFix().ApplyAsync(context);
-        await new SEC003HttpsRedirectionFix().ApplyAsync(context);
+        await Apply(context, new REL001HealthChecksFix(), new SEC003HttpsRedirectionFix());
 
         DotnetCli.Run(["build"], context.RootPath, TimeSpan.FromMinutes(3));
+    }
+
+    private static async Task Apply(FeatureContext context, params IRuleFix[] fixes)
+    {
+        var workspace = new FixWorkspace(context);
+
+        foreach (var fix in fixes)
+        {
+            await fix.ApplyAsync(workspace);
+        }
+
+        workspace.Commit();
     }
 
     private FeatureContext Generate(string projectName)
