@@ -7,18 +7,27 @@ internal static class ProgramFileEditor
     {
         var lines = File.ReadAllLines(programCsPath).ToList();
 
-        InsertMissingUsings(lines, usings);
-        InsertAfter(lines, "WebApplication.CreateBuilder", serviceRegistrationLines);
+        AddUsingsAndServiceRegistration(lines, usings, serviceRegistrationLines);
 
         File.WriteAllLines(programCsPath, lines);
+    }
+
+    public static void AddUsingsAndServiceRegistration(
+        List<string> lines, IReadOnlyList<string> usings, IReadOnlyList<string> serviceRegistrationLines)
+    {
+        InsertMissingUsings(lines, usings);
+        InsertAfter(lines, "WebApplication.CreateBuilder", serviceRegistrationLines);
     }
 
     public static void InsertAfterBuilderBuild(string programCsPath, IReadOnlyList<string> lines)
     {
         var fileLines = File.ReadAllLines(programCsPath).ToList();
-        InsertAfter(fileLines, "builder.Build()", lines);
+        InsertAfterBuilderBuild(fileLines, lines);
         File.WriteAllLines(programCsPath, fileLines);
     }
+
+    public static void InsertAfterBuilderBuild(List<string> fileLines, IReadOnlyList<string> lines) =>
+        InsertAfter(fileLines, "builder.Build()", lines);
 
     // Middleware that must run before a later middleware (e.g. authentication before the rate limiter, as
     // SEC009 expects) goes just before `beforeAnchor` when it's present; otherwise - a project that never
@@ -42,9 +51,12 @@ internal static class ProgramFileEditor
     public static void InsertBeforeAppRun(string programCsPath, IReadOnlyList<string> lines)
     {
         var fileLines = File.ReadAllLines(programCsPath).ToList();
-        InsertBefore(fileLines, "app.Run(", lines);
+        InsertBeforeAppRun(fileLines, lines);
         File.WriteAllLines(programCsPath, fileLines);
     }
+
+    public static void InsertBeforeAppRun(List<string> fileLines, IReadOnlyList<string> lines) =>
+        InsertBefore(fileLines, "app.Run(", lines);
 
     private static void InsertMissingUsings(List<string> lines, IReadOnlyList<string> usings)
     {

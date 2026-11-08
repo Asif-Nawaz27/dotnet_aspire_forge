@@ -1,13 +1,22 @@
 # `aspireforge fix`
 
-Automatically fixes a single rule finding. Run it from the project root (the directory containing
-the `.sln`/`.slnx` file).
+Automatically fixes rule findings in the Api project. Run it from the project root (the directory
+containing the `.sln`/`.slnx` file).
 
 ## Usage
 
 ```bash
-aspireforge fix <ruleId>
+aspireforge fix <ruleId> [--dry-run]
+aspireforge fix --all [--dry-run]
 ```
+
+| Argument/Option | Description |
+|---|---|
+| `<ruleId>` | The rule to fix, e.g. `REL001`. |
+| `--all` | Fix every finding `doctor` reports that has an automatic fix. |
+| `--dry-run` | Show the changes as a diff without writing anything. |
+
+Give a rule ID or `--all`, not both.
 
 ## Example
 
@@ -23,6 +32,56 @@ REL001 fixed successfully.
 
 Re-running `aspireforge doctor` afterward no longer reports that rule.
 
+## Previewing changes
+
+```
+$ aspireforge fix --all --dry-run
+Dry run: nothing was changed.
+
+  REL001   Adds health checks (AddHealthChecks/MapHealthChecks) directly to the Api.
+  SEC003   Adds app.UseHttpsRedirection() to the Api.
+
+--- src/Orders.Api/Program.cs
++++ src/Orders.Api/Program.cs
+@@ -1,7 +1,13 @@
+ var builder = WebApplication.CreateBuilder(args);
+
++builder.Services.AddHealthChecks();
++
+ var app = builder.Build();
+
++app.UseHttpsRedirection();
++
+ app.MapGet("/", () => "Hello");
+
++app.MapHealthChecks("/health");
++
+ app.Run();
+
+1 file would change. Run without --dry-run to apply.
+```
+
+The diff is exactly what the same command without `--dry-run` writes. A preview exits `0`, whatever it
+finds.
+
+## What runs
+
+A fix adds code, so it only runs when `doctor` reports its rule. Running `fix` on a project that
+already passes changes nothing, however many times you run it:
+
+```
+$ aspireforge fix REL001
+Nothing to fix: doctor doesn't report REL001.
+```
+
+- **`--all` follows `doctor` exactly.** Rules you've disabled and findings you've
+  [accepted](doctor.md#accepting-findings), by inline comment or baseline, are left alone.
+- **A named rule is an explicit request.** `fix SEC003` fixes a baselined SEC003 finding. It only
+  needs the problem to really be there.
+
+Either every fix succeeds or nothing is written, so a failure can't leave the project half-fixed.
+Edits keep each file's line endings, so your own diff shows only the lines a fix changed.
+
 ## Fixable rules today
 
 | Rule | What the fix does |
@@ -30,7 +89,7 @@ Re-running `aspireforge doctor` afterward no longer reports that rule.
 | REL001 | Adds `builder.Services.AddHealthChecks()` and `app.MapHealthChecks("/health")` directly to `Api`'s `Program.cs`. |
 | SEC003 | Adds `app.UseHttpsRedirection()` to `Api`'s `Program.cs`. |
 
-Most of the [13 rules](../architecture/rule-engine.md) don't have an automatic fix yet:
+Most [rules](../architecture/rule-engine.md) don't have an automatic fix yet:
 
 - **SEC001, OBS001, OBS002** already have a richer fix via [`add`](add.md) (`add authentication`,
   `add telemetry`) that does more than a one-line edit would.
@@ -51,6 +110,6 @@ Running `fix` against one of these prints the current list of fixable rule IDs a
 
 | Code | Meaning |
 |---|---|
-| `0` | Fix applied successfully. |
-| `2` | No fix is available for that rule ID, or no solution file was found in the current directory. |
-| `3` | The fix started but failed partway through. |
+| `0` | Fixes applied, a dry run finished, or there was nothing to fix. |
+| `2` | No fix is available for that rule ID, neither or both of a rule ID and `--all` were given, no solution file or Api project was found, or `.aspireforge/baseline.json` can't be read. |
+| `3` | A fix failed. Nothing was written. |

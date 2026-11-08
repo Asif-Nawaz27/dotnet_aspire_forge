@@ -1,5 +1,3 @@
-using AspireForge.Core.Features;
-
 namespace AspireForge.Core.Fixes;
 
 // Deliberately separate from IAnalysisRule: a rule knows how to detect a problem, not how to fix
@@ -11,5 +9,7 @@ public interface IRuleFix
 
     string Description { get; }
 
-    Task<IReadOnlyList<string>> ApplyAsync(FeatureContext context, CancellationToken cancellationToken = default);
+    // Makes its edits in the workspace and returns what it did. Writing to disk directly would break
+    // --dry-run and leave a project half-fixed when a later fix fails.
+    Task<IReadOnlyList<string>> ApplyAsync(FixWorkspace workspace, CancellationToken cancellationToken = default);
 }
