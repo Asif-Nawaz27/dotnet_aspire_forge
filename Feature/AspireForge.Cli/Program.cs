@@ -128,15 +128,30 @@ static Command BuildDoctorCommand()
 
 static Command BuildFixCommand()
 {
-    var ruleIdArgument = new Argument<string>("ruleId")
+    var ruleIdArgument = new Argument<string?>("ruleId")
     {
         Description = "The rule ID to fix, e.g. REL001.",
+        Arity = ArgumentArity.ZeroOrOne,
     };
 
-    var command = new Command("fix", "Automatically fix a specific rule finding.") { ruleIdArgument };
+    var allOption = new Option<bool>("--all")
+    {
+        Description = "Fix every finding doctor reports that has an automatic fix.",
+    };
 
-    command.SetAction(parseResult =>
-        new FixCommand(new ConsoleRenderer()).RunAsync(parseResult.GetValue(ruleIdArgument)!));
+    var dryRunOption = new Option<bool>("--dry-run")
+    {
+        Description = "Show the changes as a diff without writing anything.",
+    };
+
+    var command = new Command("fix", "Automatically fix rule findings.") { ruleIdArgument, allOption, dryRunOption };
+
+    command.SetAction((parseResult, cancellationToken) =>
+        new FixCommand(new ConsoleRenderer()).RunAsync(
+            parseResult.GetValue(ruleIdArgument),
+            parseResult.GetValue(allOption),
+            parseResult.GetValue(dryRunOption),
+            cancellationToken: cancellationToken));
 
     return command;
 }
