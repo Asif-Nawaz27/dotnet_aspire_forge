@@ -21,8 +21,25 @@ public static class ConfigLoader
             return new AspireForgeConfig();
         }
 
-        var json = File.ReadAllText(configPath);
-        return JsonSerializer.Deserialize<AspireForgeConfig>(json, JsonOptions) ?? new AspireForgeConfig();
+        try
+        {
+            return JsonSerializer.Deserialize<AspireForgeConfig>(File.ReadAllText(configPath), JsonOptions) ?? new AspireForgeConfig();
+        }
+        // The serializer's own message names .NET types and byte positions; say what's wrong in the
+        // file's terms instead.
+        catch (JsonException exception) when (exception.Path == "$.architecture")
+        {
+            throw new InvalidDataException(
+                $"The config at '{configPath}' has an unsupported \"architecture\". It takes \"clean\" or \"layered\" - "
+                    + "see docs/rules/architecture.md.",
+                exception);
+        }
+        catch (JsonException exception)
+        {
+            var line = exception.LineNumber is { } number ? $" on line {number + 1}" : string.Empty;
+
+            throw new InvalidDataException($"The config at '{configPath}' isn't valid JSON{line}.", exception);
+        }
     }
 
     private static string? FindConfigFile(string startDirectory)
