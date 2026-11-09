@@ -1,5 +1,51 @@
 # Architecture rules
 
+## Architecture styles
+
+The architecture rules check that dependencies point the way your architecture allows, so `doctor`
+needs to know which architecture that is. Two styles are supported:
+
+| Style | Layers, dependencies pointing this way | Typical names |
+| --- | --- | --- |
+| `clean` | Presentation -> Infrastructure -> Application -> Domain | `.Api`, `.Infrastructure`, `.Application`, `.Domain` - what `aspireforge new` generates |
+| `layered` (N-tier) | Presentation -> Business -> Data Access -> Entities | `.Web`, `.BLL`, `.DAL`, `.Entities` |
+
+Each project's layer comes from the last segment of its name, ignoring case:
+
+| Style | Layer | Project name ends in |
+| --- | --- | --- |
+| clean | Domain | `.Domain` |
+| clean | Application | `.Application` |
+| clean | Infrastructure | `.Infrastructure`, `.Persistence` |
+| clean | Presentation | `.Api`, `.WebApi`, `.Web` |
+| layered | Entities | `.Entities`, `.Models`, `.Domain` |
+| layered | Data Access | `.DataAccess`, `.Data`, `.DAL`, `.Repository`, `.Repositories`, `.Persistence` |
+| layered | Business | `.Business`, `.BusinessLogic`, `.BLL`, `.Logic`, `.Services` |
+| layered | Presentation | `.Api`, `.WebApi`, `.Web`, `.UI`, `.Presentation`, `.Mvc` |
+
+**Detection.** Without configuration, `doctor` looks at the names of the analysed project and every
+project it references, and picks the style more of them belong to. Only names specific to one style
+count: `Application`, `Infrastructure` and `Domain` for clean; `Business`, `BusinessLogic`, `BLL`,
+`Logic`, `DataAccess`, `Data`, `DAL`, `Repository`, `Repositories` and `Entities` for layered.
+`Api`, `Services` and `Models` don't count, because projects of every style use them.
+
+**Setting it.** If detection picks the wrong style, or none, set it in `.aspireforge/config.json`:
+
+```json
+{ "architecture": "layered" }
+```
+
+The report always says which it used:
+
+```
+Architecture: clean (detected)
+```
+
+**When it isn't recognised** - a single-project API, or names that tie or match neither style -
+ARCH002 and ARCH003 are skipped rather than guessed at. Their checklist lines say `skipped`, not
+`✓`, and they don't count as passed. Skipping costs nothing in the score: nothing was found. ARCH001
+still runs, because it looks at the API's own code rather than at layers.
+
 ## ARCH001 - API directly accesses persistence layer
 
 **Default severity:** `warning`
@@ -57,16 +103,20 @@ A reference pointing the other way (`Domain` -> `Infrastructure`, `Application` 
 `Infrastructure` -> `Api`, ...) compiles fine, then gradually ties business logic to a database,
 framework, or host - exactly what the layering exists to prevent.
 
+In [layered architecture](#architecture-styles) the same rule applies to its own layers:
+
+```
+Presentation -> Business -> Data Access -> Entities
+```
+
+So `Data Access` -> `Business` and `Entities` -> anything are flagged. Presentation referencing Data
+Access directly is allowed in both styles: the host wires data access up for dependency injection.
+Using it in code is ARCH001's concern.
+
 ARCH002 walks the project-reference graph starting from the analysed project, so running `doctor`
 on the Api checks every layer it pulls in, transitively. Each project's layer comes from the last
-segment of its name:
-
-| Layer | Project name ends in |
-| --- | --- |
-| Domain | `.Domain` |
-| Application | `.Application` |
-| Infrastructure | `.Infrastructure`, `.Persistence` |
-| Presentation | `.Api`, `.WebApi`, `.Web` |
+segment of its name; see [Architecture styles](#architecture-styles) for the names of each style.
+When the architecture isn't recognised, ARCH002 is skipped.
 
 Any other project - `ServiceDefaults`, `Shared`, `Contracts`, an Aspire `AppHost`, and `.Core` - is
 unclassified and never reported. `.Core` is deliberately left out: some templates use it for the
@@ -88,7 +138,9 @@ violation as a reversed project reference - it ties business logic to a database
 SDK - but ARCH002 only sees project references.
 
 ARCH003 walks the same project-reference graph from the analysed project, with the same layer naming
-as ARCH002, and checks each `Domain` and `Application` project:
+as ARCH002, and checks each `Domain` and `Application` project. In layered architecture, `Entities`
+is checked like `Domain` and `Business` like `Application`, and the advice names Data Access instead
+of Infrastructure. When the architecture isn't recognised, ARCH003 is skipped.
 
 | Dependency | Domain | Application |
 | --- | --- | --- |

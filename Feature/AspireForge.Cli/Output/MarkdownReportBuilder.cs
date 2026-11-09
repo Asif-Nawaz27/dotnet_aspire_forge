@@ -17,7 +17,9 @@ public static class MarkdownReportBuilder
         IReadOnlyList<AcceptedFinding> accepted,
         int unmatchedBaselineEntries,
         IReadOnlySet<string> fixableRuleIds,
-        string currentDirectory)
+        string currentDirectory,
+        string architecture,
+        IReadOnlySet<string> skippedRuleIds)
     {
         var report = new StringBuilder();
         var score = ReadinessScore.Calculate(result.Issues);
@@ -27,8 +29,17 @@ public static class MarkdownReportBuilder
         report.AppendLine();
         report.AppendLine($"**Production Readiness: {score.OutOfTen}/10 ({score.Points}/100)**{reason}");
         report.AppendLine();
+        report.AppendLine($"Architecture: {architecture}");
+        report.AppendLine();
 
-        WriteTotals(report, result, rules, accepted);
+        WriteTotals(report, result, rules, accepted, skippedRuleIds);
+
+        if (skippedRuleIds.Count > 0)
+        {
+            report.AppendLine($"> {string.Join(" and ", skippedRuleIds.Order())} skipped: the architecture isn't recognised. "
+                + "Set `\"architecture\"` to `\"clean\"` or `\"layered\"` in `.aspireforge/config.json` to check layer dependencies.");
+            report.AppendLine();
+        }
         WriteNotes(report, accepted, unmatchedBaselineEntries);
 
         if (result.Issues.Count == 0)
@@ -53,17 +64,21 @@ public static class MarkdownReportBuilder
         StringBuilder report,
         AnalysisResult result,
         IReadOnlyList<IAnalysisRule> rules,
-        IReadOnlyList<AcceptedFinding> accepted)
+        IReadOnlyList<AcceptedFinding> accepted,
+        IReadOnlySet<string> skippedRuleIds)
     {
         var errors = result.Issues.Count(issue => issue.Severity >= Severity.Error);
         var warnings = result.Issues.Count(issue => issue.Severity == Severity.Warning);
         var suggestions = result.Issues.Count - errors - warnings;
-        var notPassed = result.Issues.Select(issue => issue.RuleId).Concat(accepted.Select(finding => finding.RuleId)).ToHashSet();
+        var notPassed = result.Issues.Select(issue => issue.RuleId)
+            .Concat(accepted.Select(finding => finding.RuleId))
+            .Concat(skippedRuleIds)
+            .ToHashSet();
         var passed = rules.Count(rule => !notPassed.Contains(rule.Id));
 
-        report.AppendLine("| Errors | Warnings | Suggestions | Passed |");
-        report.AppendLine("| --- | --- | --- | --- |");
-        report.AppendLine($"| {errors} | {warnings} | {suggestions} | {passed} |");
+        report.AppendLine("| Errors | Warnings | Suggestions | Passed | Skipped |");
+        report.AppendLine("| --- | --- | --- | --- | --- |");
+        report.AppendLine($"| {errors} | {warnings} | {suggestions} | {passed} | {skippedRuleIds.Count} |");
         report.AppendLine();
     }
 

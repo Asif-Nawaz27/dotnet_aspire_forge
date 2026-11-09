@@ -1,8 +1,12 @@
 using AspireForge.Core.Analysis;
+using AspireForge.Core.Configuration;
 
 namespace AspireForge.Analyzers;
 
-public class ProjectAnalyzer(IEnumerable<IAnalysisRule> rules, IFindingSuppressions? suppressions = null)
+public class ProjectAnalyzer(
+    IEnumerable<IAnalysisRule> rules,
+    IFindingSuppressions? suppressions = null,
+    ArchitectureStyle? architecture = null)
     : IProjectAnalyzer
 {
     private readonly IReadOnlyList<IAnalysisRule> _rules = rules.ToList();
@@ -12,7 +16,7 @@ public class ProjectAnalyzer(IEnumerable<IAnalysisRule> rules, IFindingSuppressi
         string path,
         CancellationToken cancellationToken = default)
     {
-        var context = BuildProjectContext(path) with { Suppressions = _suppressions };
+        var context = BuildProjectContext(path) with { Suppressions = _suppressions, Architecture = architecture };
         var rules = LoadRules();
         var issues = await ExecuteRules(rules, context, cancellationToken);
 

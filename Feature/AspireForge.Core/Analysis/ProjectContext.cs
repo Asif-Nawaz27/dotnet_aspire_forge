@@ -24,4 +24,7 @@ public sealed record ProjectContext
 
     // Rules ask this about each occurrence they find - see IFindingSuppressions.
     public IFindingSuppressions Suppressions { get; init; } = NoFindingSuppressions.Instance;
+
+    // The architecture set in config, for the architecture rules. Null means detect it.
+    public Configuration.ArchitectureStyle? Architecture { get; init; }
 }

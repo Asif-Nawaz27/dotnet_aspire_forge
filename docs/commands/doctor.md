@@ -31,6 +31,7 @@ AspireForge Doctor
 Project: Orders.Api
 Framework: net10.0
 Path: src/Orders.Api/Orders.Api.csproj
+Architecture: clean (detected)
 
 Security
   ⚠ Authentication not configured                                 SEC001

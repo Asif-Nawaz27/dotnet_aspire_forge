@@ -60,12 +60,17 @@ Runs a given set of rules against a project and aggregates the results:
 
 ```json
 {
+  "architecture": "clean",
   "rules": {
     "SEC001": { "severity": "error" },
     "TEST002": { "enabled": false }
   }
 }
 ```
+
+`architecture` is optional: `clean` or `layered`, detected from project names when it's left out.
+See [Architecture styles](../rules/architecture.md#architecture-styles). A file `doctor` can't read,
+including an unsupported `architecture`, stops it with exit code `2` and says what's wrong.
 
 Two pure functions apply it, both in `AnalysisRuleSet`:
 
