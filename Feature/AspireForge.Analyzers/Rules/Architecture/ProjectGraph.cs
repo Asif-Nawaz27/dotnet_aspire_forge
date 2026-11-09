@@ -3,20 +3,12 @@ using System.Xml.Linq;
 
 namespace AspireForge.Analyzers.Rules.Architecture;
 
-// Clean-architecture layers, ordered inside-out: a project may only depend on layers below its own.
-internal enum ProjectLayer
-{
-    Domain,
-    Application,
-    Infrastructure,
-    Presentation,
-}
-
 // The project-reference graph reachable from the analysed project, shared by the architecture rules so
-// they agree on which projects exist and which layer each one is (ARCH002, ARCH003).
+// they agree on which projects exist. Which layer each one is depends on the architecture - see
+// ArchitectureModel.Classify.
 internal static class ProjectGraph
 {
-    public sealed record Project(string File, string Name, ProjectLayer? Layer, XDocument Document);
+    public sealed record Project(string File, string Name, XDocument Document);
 
     // Breadth-first from `startProjectFile` through <ProjectReference>s. Missing or malformed project
     // files are skipped, and cycles are visited once.
@@ -35,30 +27,13 @@ internal static class ProjectGraph
             }
 
             var name = Path.GetFileNameWithoutExtension(projectFile);
-            yield return new Project(projectFile, name, Classify(name), document);
+            yield return new Project(projectFile, name, document);
 
             foreach (var reference in Elements(document, "ProjectReference"))
             {
                 pending.Enqueue(ResolveReference(projectFile, reference));
             }
         }
-    }
-
-    // The layer from the last segment of a project's name; null for anything else (ServiceDefaults,
-    // Shared, Contracts, AppHost, and ".Core" - which means the domain in some templates and a shared
-    // utilities project in others).
-    public static ProjectLayer? Classify(string projectName)
-    {
-        var lastSegment = projectName[(projectName.LastIndexOf('.') + 1)..];
-
-        return lastSegment.ToLowerInvariant() switch
-        {
-            "domain" => ProjectLayer.Domain,
-            "application" => ProjectLayer.Application,
-            "infrastructure" or "persistence" => ProjectLayer.Infrastructure,
-            "api" or "webapi" or "web" => ProjectLayer.Presentation,
-            _ => null,
-        };
     }
 
     // Elements with a non-empty Include, matched by local name so projects using the legacy MSBuild XML

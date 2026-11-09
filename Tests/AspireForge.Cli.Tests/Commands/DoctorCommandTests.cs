@@ -331,6 +331,56 @@ public class DoctorCommandTests : IDisposable
         Assert.Equal(ExitCodes.Success, (await Doctor()).ExitCode);
     }
 
+    // The sample is a single project, so no name says which architecture it is.
+    [Fact]
+    public async Task UnrecognisedArchitecture_ShowsTheLayerRulesAsSkipped_NotPassed()
+    {
+        var (_, output) = await Doctor();
+
+        Assert.Contains("Architecture: not recognised", output);
+        Assert.Contains("ARCH002 and ARCH003 skipped.", output);
+        Assert.Matches(@"- Layer direction: skipped\s+ARCH002", output);
+        Assert.Matches(@"- Inner-layer packages: skipped\s+ARCH003", output);
+        Assert.DoesNotContain("Layer dependencies point inward", output);
+        Assert.Contains("Skipped:     2", output);
+    }
+
+    [Fact]
+    public async Task ConfiguredArchitecture_IsShown_AndNothingIsSkipped()
+    {
+        Directory.CreateDirectory(Path.Combine(_projectDirectory, ".aspireforge"));
+        File.WriteAllText(Path.Combine(_projectDirectory, ".aspireforge", "config.json"), """{ "architecture": "layered" }""");
+
+        var (_, output) = await Doctor();
+
+        Assert.Contains("Architecture: layered (from config)", output);
+        Assert.Contains("Layer dependencies point inward", output);
+        Assert.DoesNotContain("Skipped:", output);
+    }
+
+    [Fact]
+    public async Task InvalidConfig_StopsWithAClearMessage()
+    {
+        Directory.CreateDirectory(Path.Combine(_projectDirectory, ".aspireforge"));
+        File.WriteAllText(Path.Combine(_projectDirectory, ".aspireforge", "config.json"), """{ "architecture": "hexagonal" }""");
+
+        var (exitCode, output) = await Doctor();
+
+        Assert.Equal(ExitCodes.InvalidConfiguration, exitCode);
+        Assert.Contains("\"clean\" or \"layered\"", output);
+    }
+
+    [Fact]
+    public async Task MarkdownReport_ShowsTheArchitecture_AndWhatWasSkipped()
+    {
+        var (_, output) = await Doctor(format: OutputFormat.Markdown);
+
+        Assert.Contains("Architecture: not recognised", output);
+        Assert.Contains("| Errors | Warnings | Suggestions | Passed | Skipped |", output);
+        Assert.Matches(@"\| \d+ \| \d+ \| \d+ \| \d+ \| 2 \|", output);
+        Assert.Contains("> ARCH002 and ARCH003 skipped", output);
+    }
+
     [Fact]
     public async Task MarkdownReport_ReportsFindings_AndKeepsTheExitCode()
     {

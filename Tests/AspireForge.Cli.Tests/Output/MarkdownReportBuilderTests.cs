@@ -23,7 +23,8 @@ public class MarkdownReportBuilderTests
     private static string Build(
         IReadOnlyCollection<AnalysisIssue>? issues = null,
         IReadOnlyList<AcceptedFinding>? accepted = null,
-        int unmatched = 0) =>
+        int unmatched = 0,
+        IReadOnlySet<string>? skipped = null) =>
         MarkdownReportBuilder.Build(
             Context,
             new AnalysisResult("Orders.Api", issues ?? []),
@@ -31,7 +32,9 @@ public class MarkdownReportBuilderTests
             accepted ?? [],
             unmatched,
             new HashSet<string>(),
-            Root);
+            Root,
+            "clean (detected)",
+            skipped ?? new HashSet<string>());
 
     [Fact]
     public void ShowsTheScoreAndTotals()
@@ -40,7 +43,7 @@ public class MarkdownReportBuilderTests
 
         Assert.Contains("## AspireForge Doctor: Orders.Api", report);
         Assert.Contains("**Production Readiness: 6/10 (60/100)** - capped at 60", report);
-        Assert.Contains("| 1 | 0 | 0 | 39 |", report);
+        Assert.Contains("| 1 | 0 | 0 | 39 | 0 |", report);
     }
 
     [Fact]
@@ -117,7 +120,17 @@ public class MarkdownReportBuilderTests
         Assert.Contains("| SEC002 | `Program.cs:4` | suppressed: public \\| API |", report);
         Assert.Contains("| OBS005 | `Program.cs:9` | baselined |", report);
         Assert.Contains("| SEC001 | whole project | baselined |", report);
-        Assert.Contains("| 0 | 0 | 0 | 37 |", report);
+        Assert.Contains("| 0 | 0 | 0 | 37 | 0 |", report);
+    }
+
+    // A rule that never ran hasn't passed.
+    [Fact]
+    public void CountsSkippedRules_SeparatelyFromPassed()
+    {
+        var report = Build(skipped: new HashSet<string> { "ARCH002", "ARCH003" });
+
+        Assert.Contains("| 0 | 0 | 0 | 38 | 2 |", report);
+        Assert.Contains("> ARCH002 and ARCH003 skipped: the architecture isn't recognised.", report);
     }
 
     [Theory]

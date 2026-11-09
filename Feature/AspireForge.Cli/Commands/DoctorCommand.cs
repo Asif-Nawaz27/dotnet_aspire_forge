@@ -1,9 +1,11 @@
 using System.Text.Json;
 using AspireForge.Analyzers;
 using AspireForge.Analyzers.Configuration;
+using AspireForge.Analyzers.Rules.Architecture;
 using AspireForge.Analyzers.Suppressions;
 using AspireForge.Cli.Output;
 using AspireForge.Core.Analysis;
+using AspireForge.Core.Configuration;
 using AspireForge.Generators;
 
 namespace AspireForge.Cli.Commands;
@@ -38,12 +40,29 @@ public class DoctorCommand(ConsoleRenderer renderer)
             return ExitCodes.InvalidConfiguration;
         }
 
-        var config = ConfigLoader.Load(context.RootDirectory);
+        AspireForgeConfig config;
+
+        try
+        {
+            config = ConfigLoader.Load(context.RootDirectory);
+        }
+        catch (InvalidDataException exception)
+        {
+            renderer.WriteLine(exception.Message);
+            return ExitCodes.InvalidConfiguration;
+        }
+
         var rules = AnalysisRuleSet.ApplyConfig(AnalysisRuleSet.CreateDefault(scanVulnerablePackages), config);
+        var architecture = ArchitectureResolver.Resolve(context.ProjectFile, config.Architecture, cancellationToken);
+
+        // Rules that need to know the architecture never ran when it isn't known - not the same as passing.
+        var skippedRuleIds = architecture.Model is null
+            ? rules.Where(rule => rule is IRequiresArchitecture).Select(rule => rule.Id).ToHashSet()
+            : [];
 
         if (updateBaseline)
         {
-            await WriteBaselineAsync(path, context, rules, cancellationToken);
+            await WriteBaselineAsync(path, context, rules, config.Architecture, cancellationToken);
             return ExitCodes.Success;
         }
 
@@ -60,7 +79,7 @@ public class DoctorCommand(ConsoleRenderer renderer)
         }
 
         var suppressions = FindingSuppressions.Create(context.RootDirectory, baseline);
-        var analyzer = new ProjectAnalyzer(rules, suppressions);
+        var analyzer = new ProjectAnalyzer(rules, suppressions, config.Architecture);
         var rawResult = await analyzer.AnalyzeAsync(path, cancellationToken);
         var result = AnalysisRuleSet.ApplySeverityOverrides(rawResult, config);
 
@@ -84,11 +103,13 @@ public class DoctorCommand(ConsoleRenderer renderer)
                     suppressions.Accepted,
                     suppressions.UnmatchedBaselineCount(rules.Select(rule => rule.Id).ToHashSet()),
                     RuleFixSet.CreateDefault().Select(fix => fix.RuleId).ToHashSet(StringComparer.OrdinalIgnoreCase),
-                    Directory.GetCurrentDirectory()));
+                    Directory.GetCurrentDirectory(),
+                    architecture.Describe(),
+                    skippedRuleIds));
                 return shouldFail ? ExitCodes.AnalysisFoundErrors : ExitCodes.Success;
         }
 
-        WriteTextReport(context, result, rules, suppressions, showDetails: !summaryOnly);
+        WriteTextReport(context, result, rules, suppressions, architecture, skippedRuleIds, showDetails: !summaryOnly);
 
         return shouldFail ? ExitCodes.AnalysisFoundErrors : ExitCodes.Success;
     }
@@ -96,10 +117,14 @@ public class DoctorCommand(ConsoleRenderer renderer)
     // Runs the rules once and accepts whatever they'd report. Entries for rules that didn't run are
     // kept: `--update-baseline` without --vulnerable mustn't forget the accepted DEP002 findings.
     private async Task WriteBaselineAsync(
-        string path, ProjectContext context, IReadOnlyList<IAnalysisRule> rules, CancellationToken cancellationToken)
+        string path,
+        ProjectContext context,
+        IReadOnlyList<IAnalysisRule> rules,
+        ArchitectureStyle? architecture,
+        CancellationToken cancellationToken)
     {
         var recorder = FindingSuppressions.Recording(context.RootDirectory);
-        await new ProjectAnalyzer(rules, recorder).AnalyzeAsync(path, cancellationToken);
+        await new ProjectAnalyzer(rules, recorder, architecture).AnalyzeAsync(path, cancellationToken);
 
         var rulesThatRan = rules.Select(rule => rule.Id).ToHashSet();
         var recorded = recorder.RecordedEntries;
@@ -141,6 +166,8 @@ public class DoctorCommand(ConsoleRenderer renderer)
         AnalysisResult result,
         IReadOnlyList<IAnalysisRule> rules,
         FindingSuppressions suppressions,
+        ArchitectureResolution architecture,
+        IReadOnlySet<string> skippedRuleIds,
         bool showDetails)
     {
         var issuesByRuleId = result.Issues.ToDictionary(issue => issue.RuleId);
@@ -155,11 +182,19 @@ public class DoctorCommand(ConsoleRenderer renderer)
         renderer.WriteLine($"Project: {context.ProjectName}");
         renderer.WriteLine($"Framework: {context.TargetFramework ?? "unknown"}");
         renderer.WriteLine($"Path: {FindingFormatter.DisplayPath(context.ProjectFile, currentDirectory)}");
+        renderer.WriteLine($"Architecture: {architecture.Describe()}");
+
+        if (skippedRuleIds.Count > 0)
+        {
+            renderer.WriteLine($"  {string.Join(" and ", skippedRuleIds.Order())} skipped. Set \"architecture\" to \"clean\" or "
+                + "\"layered\" in .aspireforge/config.json to check layer dependencies.");
+        }
 
         var errorCount = 0;
         var warningCount = 0;
         var suggestionCount = 0;
         var passedCount = 0;
+        var skippedCount = 0;
 
         foreach (var category in activeChecks.Select(check => check.Category).Distinct())
         {
@@ -173,6 +208,13 @@ public class DoctorCommand(ConsoleRenderer renderer)
                     if (acceptedRuleIds.Contains(check.RuleId))
                     {
                         renderer.WriteCheck("-", $"{check.ShortName}: accepted", check.RuleId);
+                        continue;
+                    }
+
+                    if (skippedRuleIds.Contains(check.RuleId))
+                    {
+                        renderer.WriteCheck("-", $"{check.ShortName}: skipped", check.RuleId);
+                        skippedCount++;
                         continue;
                     }
 
@@ -216,6 +258,11 @@ public class DoctorCommand(ConsoleRenderer renderer)
         renderer.WriteLine($"Warnings:    {warningCount}");
         renderer.WriteLine($"Suggestions: {suggestionCount}");
         renderer.WriteLine($"Passed:      {passedCount}");
+
+        if (skippedCount > 0)
+        {
+            renderer.WriteLine($"Skipped:     {skippedCount}");
+        }
 
         var inlineCount = accepted.Count(finding => finding.By == AcceptedBy.InlineComment);
         var baselinedCount = accepted.Count - inlineCount;
