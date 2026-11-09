@@ -97,13 +97,19 @@ public sealed partial class ARCH001ApiDirectlyAccessesPersistenceLayer : IAnalys
             ? $" (and {usages.Count - MaxLocationsInDescription} more)"
             : string.Empty;
 
+        // Clean architecture's names when the architecture isn't known: it's what `new` generates.
+        var model = ArchitectureResolver.Resolve(context, cancellationToken).Model ?? ArchitectureModel.Clean;
+        var logic = model.LogicLayer.Name;
+        var data = model.InfrastructureLayer.Name;
+        var article = "AEIOU".Contains(char.ToUpperInvariant(logic[0])) ? "an" : "a";
+
         return new AnalysisIssue(
             Id,
             Title,
             $"API code works with the database directly: {locations}{more}. Even without its own EF Core package, the API "
-                + "reaches the DbContext through its Infrastructure reference, tying endpoints to the schema and bypassing "
-                + "the Application layer. Inject an Application service (or repository interface) instead, and keep the "
-                + "DbContext inside Infrastructure.",
+                + $"reaches the DbContext through its {data} reference, tying endpoints to the schema and bypassing "
+                + $"the {logic} layer. Inject {article} {logic} service (or repository interface) instead, and keep the "
+                + $"DbContext inside {data}.",
             DefaultSeverity,
             usages[0].File,
             usages[0].Line);

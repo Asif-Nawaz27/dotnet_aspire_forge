@@ -3,25 +3,25 @@ using AspireForge.Core.Analysis;
 
 namespace AspireForge.Analyzers.Rules.Architecture;
 
-// ARCH002's counterpart for packages: Domain and Application must not depend on infrastructure
-// frameworks either. A <PackageReference> from Domain to EF Core, or from Application to Npgsql or
-// ASP.NET Core, is the same layering violation as a reversed project reference - it ties business
-// logic to a database, web host, or cloud SDK - but ARCH002 can't see it.
+// ARCH002's counterpart for packages: the inner layers must not depend on infrastructure frameworks
+// either. A <PackageReference> from Domain to EF Core, or from Application to Npgsql or ASP.NET Core, is
+// the same layering violation as a reversed project reference - it ties business logic to a database,
+// web host, or cloud SDK - but ARCH002 can't see it.
 //
 // Walks the project-reference graph from the analysed project (ProjectGraph, the same walk and layer
-// naming as ARCH002) and checks each Domain and Application project's references:
+// naming as ARCH002) and checks each inner project's references (LayerKind):
 //
-//   Domain       EF Core (any Microsoft.EntityFrameworkCore* package), database providers and drivers,
-//                ASP.NET Core (Microsoft.AspNetCore.* packages or <FrameworkReference Microsoft.AspNetCore.App>),
-//                HTTP clients, caches, and messaging/cloud SDKs
-//   Application  the same, except plain EF Core - many templates deliberately expose DbSet<T> from an
-//                Application interface (IApplicationDbContext) - so only EF Core *provider* packages
-//                (Microsoft.EntityFrameworkCore.SqlServer, Npgsql.EntityFrameworkCore.PostgreSQL, ...)
-//                and Microsoft.EntityFrameworkCore.Design count there
+//   Core   Domain (clean), Entities (layered): EF Core (any Microsoft.EntityFrameworkCore* package),
+//          database providers and drivers, ASP.NET Core (Microsoft.AspNetCore.* packages or
+//          <FrameworkReference Microsoft.AspNetCore.App>), HTTP clients, caches, and messaging/cloud SDKs
+//   Logic  Application (clean), Business (layered): the same, except plain EF Core - many templates
+//          deliberately expose DbSet<T> from an interface here (IApplicationDbContext) - so only EF Core
+//          *provider* packages (Microsoft.EntityFrameworkCore.SqlServer, Npgsql.EntityFrameworkCore.PostgreSQL,
+//          ...) and Microsoft.EntityFrameworkCore.Design count there
 //
 // Microsoft.Extensions.* abstractions (logging, options, DI, caching) are fine in both. Build-only
 // packages (PrivateAssets="all" - analyzers, source generators) are skipped.
-public sealed class ARCH003InnerLayerFrameworkDependency : IAnalysisRule
+public sealed class ARCH003InnerLayerFrameworkDependency : IAnalysisRule, IRequiresArchitecture
 {
     private const int MaxFindingsInDescription = 5;
 
@@ -75,24 +75,27 @@ public sealed class ARCH003InnerLayerFrameworkDependency : IAnalysisRule
         ProjectContext context,
         CancellationToken cancellationToken = default)
     {
-        var findings = new List<(string File, int? Line, string Project, ProjectLayer Layer, string Dependency)>();
+        if (ArchitectureResolver.Resolve(context, cancellationToken).Model is not { } model)
+        {
+            return Task.FromResult<AnalysisIssue?>(null);
+        }
+
+        var findings = new List<(string File, int? Line, string Project, string Layer, string Dependency)>();
 
         foreach (var project in ProjectGraph.Walk(context.ProjectFile, cancellationToken))
         {
-            if (project.Layer is not (ProjectLayer.Domain or ProjectLayer.Application))
+            if (model.Classify(project.Name) is not { Kind: LayerKind.Core or LayerKind.Logic } layer)
             {
                 continue;
             }
-
-            var layer = project.Layer.Value;
 
             foreach (var reference in ProjectGraph.Elements(project.Document, "PackageReference"))
             {
                 var package = reference.Attribute("Include")!.Value;
 
-                if (!IsBuildOnly(reference) && IsForbidden(package, layer))
+                if (!IsBuildOnly(reference) && IsForbidden(package, layer.Kind))
                 {
-                    findings.Add((project.File, ProjectGraph.LineOf(reference), project.Name, layer, package));
+                    findings.Add((project.File, ProjectGraph.LineOf(reference), project.Name, layer.Name, package));
                 }
             }
 
@@ -102,7 +105,7 @@ public sealed class ARCH003InnerLayerFrameworkDependency : IAnalysisRule
 
                 if (name.StartsWith("Microsoft.AspNetCore.App", StringComparison.OrdinalIgnoreCase))
                 {
-                    findings.Add((project.File, ProjectGraph.LineOf(framework), project.Name, layer, $"{name} (framework)"));
+                    findings.Add((project.File, ProjectGraph.LineOf(framework), project.Name, layer.Name, $"{name} (framework)"));
                 }
             }
         }
@@ -123,19 +126,23 @@ public sealed class ARCH003InnerLayerFrameworkDependency : IAnalysisRule
         return Task.FromResult<AnalysisIssue?>(new AnalysisIssue(
             Id,
             Title,
-            $"Inner layers depend on infrastructure frameworks: {listed}{more}. Domain and Application should only "
-                + "describe what the system does; move the code that needs these packages into Infrastructure (or the "
-                + "Api), behind an interface declared in Application.",
+            $"Inner layers depend on infrastructure frameworks: {listed}{more}. {Inner(model)} should only describe what "
+                + $"the system does; move the code that needs these packages into {model.InfrastructureLayer.Name} (or the "
+                + $"Api), behind an interface declared in {model.LogicLayer.Name}.",
             DefaultSeverity,
             findings[0].File,
             findings[0].Line));
     }
 
-    private static bool IsForbidden(string package, ProjectLayer layer)
+    // "Domain and Application", "Entities and Business"
+    private static string Inner(ArchitectureModel model) =>
+        string.Join(" and ", model.Layers.Where(layer => layer.Kind != LayerKind.Outer).OrderBy(layer => layer.Rank).Select(layer => layer.Name));
+
+    private static bool IsForbidden(string package, LayerKind kind)
     {
         if (package.StartsWith("Microsoft.EntityFrameworkCore", StringComparison.OrdinalIgnoreCase))
         {
-            return layer == ProjectLayer.Domain
+            return kind == LayerKind.Core
                 || EfCoreProviderPackages.Contains(package, StringComparer.OrdinalIgnoreCase);
         }
 
