@@ -4,6 +4,12 @@
     <ProjectReference Include="..\AspireForge.Core\AspireForge.Core.csproj" />
   </ItemGroup>
 
+  <!-- ProgramFileEditor is internal; its edits are tested directly rather than through installers that
+       need the network. -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="AspireForge.Generators.Tests" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>

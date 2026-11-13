@@ -52,9 +52,10 @@ dotnet run --project src/OrdersApi.Api
 aspireforge doctor src/OrdersApi.Api
 ```
 
-A freshly generated project reports several warnings (no authentication, no health checks, no
-telemetry, and so on) - that's expected. See [`doctor`](../commands/doctor.md) for what each check
-means and [`add`](../commands/add.md) for how to fix them.
+A freshly generated project passes every rule except SEC001 (authentication), which is your call -
+`aspireforge add authentication` adds JWT bearer. See [`doctor`](../commands/doctor.md) for what each
+check means, and [Production-ready out of the box](../commands/new.md#production-ready-out-of-the-box)
+for what the generator sets up.
 
 ## Add capabilities
 
