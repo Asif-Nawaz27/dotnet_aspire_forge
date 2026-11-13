@@ -98,12 +98,12 @@ public sealed class CleanArchitectureGenerator : IProjectGenerator
     // The installed `webapi` template pins whatever Microsoft.AspNetCore.OpenApi version shipped with
     // the SDK - 10.0.9 in SDK 10.0.301, which depends on Microsoft.OpenApi 2.0.0, a package with a
     // known high-severity vulnerability (GHSA-v5pm-xwqc-g5wc; DEP002 / NuGet audit NU1903). Re-adding
-    // it without a version moves it to the latest stable release, so new projects don't start out
-    // vulnerable.
+    // it moves it to the latest stable release for the project's .NET version (see FrameworkPackages), so
+    // new projects don't start out vulnerable.
     private static void UpdateTemplatePackages(IReadOnlyList<ProjectTemplate> templates, string root)
     {
         var api = templates.First(template => template.Layer == "Api");
-        DotnetCli.Run(["add", api.ProjectPath, "package", "Microsoft.AspNetCore.OpenApi"], root);
+        FrameworkPackages.Add(api.ProjectPath, "Microsoft.AspNetCore.OpenApi", root);
     }
 
     // Replace the webapi template's sample Program.cs with a production-shaped one (ApiProgramTemplate).

@@ -23,10 +23,10 @@ public sealed class PostgresFeatureInstaller : IFeatureInstaller
         var infrastructureProjectPath = CleanArchitectureLayout.InfrastructureProjectPath(context);
         var apiProjectPath = CleanArchitectureLayout.ApiProjectPath(context);
 
-        DotnetCli.Run(["add", infrastructureCsproj, "package", "Npgsql.EntityFrameworkCore.PostgreSQL"], context.RootPath);
+        FrameworkPackages.Add(infrastructureCsproj, "Npgsql.EntityFrameworkCore.PostgreSQL", context.RootPath);
         steps.Add("Added Npgsql");
 
-        DotnetCli.Run(["add", infrastructureCsproj, "package", "Microsoft.EntityFrameworkCore.Design"], context.RootPath);
+        FrameworkPackages.Add(infrastructureCsproj, "Microsoft.EntityFrameworkCore.Design", context.RootPath);
         steps.Add("Added EF Core configuration");
 
         // Npgsql and EFCore.Design can independently resolve to different Microsoft.EntityFrameworkCore

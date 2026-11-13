@@ -22,9 +22,7 @@ public sealed class RedisFeatureInstaller : IFeatureInstaller
         var infrastructureCsproj = CleanArchitectureLayout.InfrastructureCsproj(context);
         var apiProjectPath = CleanArchitectureLayout.ApiProjectPath(context);
 
-        DotnetCli.Run(
-            ["add", infrastructureCsproj, "package", "Microsoft.Extensions.Caching.StackExchangeRedis"],
-            context.RootPath);
+        FrameworkPackages.Add(infrastructureCsproj, "Microsoft.Extensions.Caching.StackExchangeRedis", context.RootPath);
         steps.Add("Added StackExchange.Redis client");
 
         AppSettingsEditor.AddConnectionString(

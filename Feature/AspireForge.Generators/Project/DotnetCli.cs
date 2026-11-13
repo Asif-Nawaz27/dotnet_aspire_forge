@@ -6,7 +6,11 @@ public static class DotnetCli
 {
     private static readonly TimeSpan DefaultTimeout = TimeSpan.FromMinutes(5);
 
-    public static void Run(IReadOnlyList<string> arguments, string workingDirectory, TimeSpan? timeout = null)
+    public static void Run(IReadOnlyList<string> arguments, string workingDirectory, TimeSpan? timeout = null) =>
+        RunForOutput(arguments, workingDirectory, timeout);
+
+    // Standard output, for commands whose result is needed (`dotnet package search --format json`).
+    public static string RunForOutput(IReadOnlyList<string> arguments, string workingDirectory, TimeSpan? timeout = null)
     {
         var startInfo = new ProcessStartInfo("dotnet")
         {
@@ -47,6 +51,8 @@ public static class DotnetCli
             throw new InvalidOperationException(
                 $"'dotnet {string.Join(' ', arguments)}' failed with exit code {process.ExitCode}.{Environment.NewLine}{stderr}{stdout}");
         }
+
+        return stdout;
     }
 
     private static void TryKillProcessTree(Process process)

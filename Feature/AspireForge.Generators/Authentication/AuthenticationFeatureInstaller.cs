@@ -24,7 +24,7 @@ public sealed class AuthenticationFeatureInstaller : IFeatureInstaller
         var apiProjectPath = CleanArchitectureLayout.ApiProjectPath(context);
         var programCsPath = Path.Combine(apiProjectPath, "Program.cs");
 
-        DotnetCli.Run(["add", apiCsproj, "package", "Microsoft.AspNetCore.Authentication.JwtBearer"], context.RootPath);
+        FrameworkPackages.Add(apiCsproj, "Microsoft.AspNetCore.Authentication.JwtBearer", context.RootPath);
         steps.Add("Added JWT Bearer authentication");
 
         // appsettings.json ships with every build, so it holds no key (SEC004); each environment supplies

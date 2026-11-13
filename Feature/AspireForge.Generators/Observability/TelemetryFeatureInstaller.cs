@@ -85,7 +85,7 @@ public sealed class TelemetryFeatureInstaller : IFeatureInstaller
                      "Microsoft.Extensions.Http.Resilience",
                  })
         {
-            DotnetCli.Run(["add", serviceDefaultsCsproj, "package", package], context.RootPath);
+            FrameworkPackages.Add(serviceDefaultsCsproj, package, context.RootPath);
         }
     }
 
