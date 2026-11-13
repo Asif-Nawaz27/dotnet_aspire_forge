@@ -234,7 +234,8 @@ public class FixCommandTests : IDisposable
     {
         var (exitCode, output) = await Fix(all: true, dryRun: true);
 
-        Assert.Equal(ExitCodes.Success, exitCode);
+        // 1, so CI can fail on fixes left undone.
+        Assert.Equal(ExitCodes.AnalysisFoundErrors, exitCode);
         Assert.Equal(Unfixed, File.ReadAllText(ProgramFile));
         Assert.Contains("Dry run: nothing was changed.", output);
         Assert.Contains("REL001", output);
@@ -282,8 +283,9 @@ public class FixCommandTests : IDisposable
     {
         File.WriteAllText(ProgramFile, Fixed);
 
-        var (_, output) = await Fix(all: true, dryRun: true);
+        var (exitCode, output) = await Fix(all: true, dryRun: true);
 
+        Assert.Equal(ExitCodes.Success, exitCode);
         Assert.Contains("Nothing to fix", output);
         Assert.DoesNotContain("---", output);
     }

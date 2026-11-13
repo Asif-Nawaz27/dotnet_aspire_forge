@@ -61,8 +61,13 @@ Dry run: nothing was changed.
 1 file would change. Run without --dry-run to apply.
 ```
 
-The diff is exactly what the same command without `--dry-run` writes. A preview exits `0`, whatever it
-finds.
+The diff is exactly what the same command without `--dry-run` writes. A preview exits `1` when it
+would change something and `0` when there's nothing to fix, so it can fail a CI build:
+
+```yaml
+- name: No automatic fixes left undone
+  run: aspireforge fix --all --dry-run
+```
 
 ## What runs
 
@@ -87,7 +92,7 @@ Edits keep each file's line endings, so your own diff shows only the lines a fix
 | Rule | What the fix does |
 |---|---|
 | REL001 | Adds `builder.Services.AddHealthChecks()` and `app.MapHealthChecks("/health")` directly to `Api`'s `Program.cs`. |
-| SEC003 | Adds `app.UseHttpsRedirection()` to `Api`'s `Program.cs`. |
+| SEC003 | Adds `app.UseHttpsRedirection()` to `Api`'s `Program.cs`, right after `app.UseExceptionHandler(...)` so the handler stays first - or after `builder.Build()` when there's no handler, or it's inside an `if` block. |
 
 Most [rules](../architecture/rule-engine.md) don't have an automatic fix yet:
 
@@ -110,6 +115,7 @@ Running `fix` against one of these prints the current list of fixable rule IDs a
 
 | Code | Meaning |
 |---|---|
-| `0` | Fixes applied, a dry run finished, or there was nothing to fix. |
+| `0` | Fixes applied, or there was nothing to fix. |
+| `1` | `--dry-run` only: fixes are available, and the preview shows what they would change. Nothing was written. |
 | `2` | No fix is available for that rule ID, neither or both of a rule ID and `--all` were given, no solution file or Api project was found, or `.aspireforge/baseline.json` can't be read. |
 | `3` | A fix failed. Nothing was written. |

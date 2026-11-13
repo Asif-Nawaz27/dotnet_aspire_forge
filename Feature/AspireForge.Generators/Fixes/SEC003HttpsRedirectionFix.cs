@@ -13,7 +13,7 @@ public sealed class SEC003HttpsRedirectionFix : IRuleFix
     {
         var programCsPath = Path.Combine(CleanArchitectureLayout.ApiProjectPath(workspace.Context), "Program.cs");
 
-        workspace.Edit(programCsPath, lines => ProgramFileEditor.InsertAfterBuilderBuild(lines, ["app.UseHttpsRedirection();"]));
+        workspace.Edit(programCsPath, lines => ProgramFileEditor.InsertAfterExceptionHandlerOrBuilderBuild(lines, ["app.UseHttpsRedirection();"]));
 
         return Task.FromResult<IReadOnlyList<string>>(["Added app.UseHttpsRedirection()"]);
     }

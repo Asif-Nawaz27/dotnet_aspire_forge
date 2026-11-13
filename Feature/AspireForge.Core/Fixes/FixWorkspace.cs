@@ -1,5 +1,5 @@
-using System.Text;
 using AspireForge.Core.Features;
+using AspireForge.Core.Text;
 
 namespace AspireForge.Core.Fixes;
 
@@ -28,19 +28,15 @@ public sealed class FixWorkspace(FeatureContext context)
     public void Edit(string path, Action<List<string>> edit)
     {
         var file = Load(path);
-        var newLine = file.Current.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" : "\n";
-        var lines = file.Current.Split('\n').Select(line => line.TrimEnd('\r')).ToList();
 
-        edit(lines);
-
-        file.Current = string.Join(newLine, lines);
+        file.Current = TextFile.EditLines(file.Current, edit);
     }
 
     public void Commit()
     {
         foreach (var (path, file) in _files.Where(file => file.Value.Original != file.Value.Current))
         {
-            File.WriteAllText(path, file.Current, new UTF8Encoding(file.HasBom));
+            TextFile.Write(path, file.Current, file.HasBom);
         }
     }
 
@@ -51,11 +47,9 @@ public sealed class FixWorkspace(FeatureContext context)
             return file;
         }
 
-        var bytes = File.ReadAllBytes(path);
-        var hasBom = bytes.AsSpan().StartsWith(Encoding.UTF8.Preamble);
-        var text = Encoding.UTF8.GetString(hasBom ? bytes[Encoding.UTF8.Preamble.Length..] : bytes);
+        var content = TextFile.Read(path);
 
-        return _files[path] = new WorkspaceFile(text, hasBom);
+        return _files[path] = new WorkspaceFile(content.Text, content.HasBom);
     }
 
     private sealed class WorkspaceFile(string text, bool hasBom)

@@ -96,10 +96,11 @@ public class FixCommand(ConsoleRenderer renderer)
             }
         }
 
+        // Like `dotnet format --verify-no-changes`: 1 when there's something to fix, so CI can fail on it.
         if (dryRun)
         {
             WritePreview(workspace, steps.Select(step => step.Fix).ToList(), root);
-            return ExitCodes.Success;
+            return workspace.Changes.Count > 0 ? ExitCodes.AnalysisFoundErrors : ExitCodes.Success;
         }
 
         workspace.Commit();
