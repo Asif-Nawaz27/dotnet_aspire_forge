@@ -24,10 +24,10 @@ public sealed class EfCoreDatabaseFeatureInstaller(DatabaseProvider provider) : 
         var infrastructureProjectPath = CleanArchitectureLayout.InfrastructureProjectPath(context);
         var apiProjectPath = CleanArchitectureLayout.ApiProjectPath(context);
 
-        DotnetCli.Run(["add", infrastructureCsproj, "package", provider.EfCorePackageName], context.RootPath);
+        FrameworkPackages.Add(infrastructureCsproj, provider.EfCorePackageName, context.RootPath);
         steps.Add($"Added {provider.DisplayName} provider");
 
-        DotnetCli.Run(["add", infrastructureCsproj, "package", "Microsoft.EntityFrameworkCore.Design"], context.RootPath);
+        FrameworkPackages.Add(infrastructureCsproj, "Microsoft.EntityFrameworkCore.Design", context.RootPath);
         steps.Add("Added EF Core configuration");
 
         // The provider package and EFCore.Design can independently resolve to different
