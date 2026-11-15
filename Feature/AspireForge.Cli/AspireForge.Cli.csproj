@@ -24,7 +24,11 @@
     <ToolCommandName>aspireforge</ToolCommandName>
     <PackageId>AspireForge</PackageId>
     <Authors>Muhammad Asif Nawaz</Authors>
-    <Description>Opinionated .NET Aspire project scaffolding and analysis CLI.</Description>
+    <Description>Production-readiness tooling for ASP.NET Core APIs: generate a clean-architecture solution, add production concerns (database, caching, telemetry, authentication, Docker), and audit any project against security, reliability, observability, testing, architecture, performance and deployment rules, with text, JSON, Markdown and SARIF output for CI.</Description>
+    <PackageTags>aspnetcore;webapi;production-readiness;linter;static-analysis;clean-architecture;scaffolding;sarif;dotnet-tool</PackageTags>
+    <PackageProjectUrl>https://github.com/Asif-Nawaz27/dotnet_aspire_forge</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Asif-Nawaz27/dotnet_aspire_forge</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
