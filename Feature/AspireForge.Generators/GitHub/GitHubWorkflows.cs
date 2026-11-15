@@ -1,3 +1,5 @@
+using AspireForge.Generators.Project;
+
 namespace AspireForge.Generators.GitHub;
 
 internal static class GitHubWorkflows
@@ -30,7 +32,7 @@ internal static class GitHubWorkflows
               - name: Setup .NET
                 uses: actions/setup-dotnet@v4
                 with:
-                  dotnet-version: '10.0.x'
+                  dotnet-version: '{GeneratedDotNet.Channel}.x'
 
               - name: Restore
                 run: dotnet restore {projectName}.slnx
