@@ -44,13 +44,18 @@ public class GeneratedProjectBuildTests : IDisposable
         DotnetCli.Run(["build"], root, SubprocessTimeout);
     }
 
-    [Fact]
-    public async Task GeneratedProject_WithSqlServerAdded_StillBuildsSuccessfully()
+    // Each provider's generated AddPersistence (UseNpgsql/UseSqlServer with a retry policy) has to compile.
+    [Theory]
+    [InlineData("postgres")]
+    [InlineData("sqlserver")]
+    public async Task GeneratedProject_WithDatabaseAdded_StillBuildsSuccessfully(string providerId)
     {
-        var root = Generate("SqlServerApi");
+        var provider = providerId == "postgres" ? DatabaseProviders.Postgres : DatabaseProviders.SqlServer;
+        var name = $"{provider.ConnectionStringName}Api";
+        var root = Generate(name);
 
-        var context = new FeatureContext { ProjectName = "SqlServerApi", RootPath = root };
-        await new EfCoreDatabaseFeatureInstaller(DatabaseProviders.SqlServer).InstallAsync(context);
+        var context = new FeatureContext { ProjectName = name, RootPath = root };
+        await new EfCoreDatabaseFeatureInstaller(provider).InstallAsync(context);
 
         DotnetCli.Run(["build"], root, SubprocessTimeout);
     }

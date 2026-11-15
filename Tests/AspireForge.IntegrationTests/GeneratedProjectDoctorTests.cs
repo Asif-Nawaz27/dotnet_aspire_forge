@@ -1,4 +1,5 @@
 using AspireForge.Analyzers;
+using AspireForge.Cli.Commands;
 using AspireForge.Core.Analysis;
 using AspireForge.Core.Features;
 using AspireForge.Core.Generation;
@@ -45,6 +46,52 @@ public class GeneratedProjectDoctorTests : IDisposable
             issues.Count == 0,
             "Unexpected findings after `add authentication`:\n"
                 + string.Join("\n", issues.Select(issue => $"  {issue.RuleId}: {issue.Description}")));
+    }
+
+    // Every `add` has to leave the project passing doctor too: the README's quick start is `new`, `doctor`,
+    // `add postgres`, `doctor`. Read from AddCommand's registry, so a new feature is covered automatically.
+    // Authentication resolves SEC001 and has its own test above.
+    public static TheoryData<string> AddFeatures() =>
+        new(AddCommand.FeatureInstallers.Keys.Where(id => id != "authentication").Order());
+
+    [Theory]
+    [MemberData(nameof(AddFeatures))]
+    public async Task AddFeature_LeavesOnlyTheAuthenticationDecision(string featureId)
+    {
+        var name = $"Add{featureId}Api";
+        var root = Generate(name);
+        await AddCommand.FeatureInstallers[featureId].InstallAsync(new FeatureContext { ProjectName = name, RootPath = root });
+
+        var issues = await AnalyzeApi(root, name);
+
+        Assert.True(
+            issues.Select(issue => issue.RuleId).SequenceEqual(["SEC001"]),
+            $"Unexpected findings after `add {featureId}`:\n"
+                + string.Join("\n", issues.Select(issue => $"  {issue.RuleId}: {issue.Description}")));
+    }
+
+    // A database and a cache, then docker-compose regenerated around them: still clean, and the api
+    // container gets its connection strings from compose, since appsettings.json leaves them empty.
+    [Fact]
+    public async Task DatabaseCacheAndDocker_Together_LeaveOnlyTheAuthenticationDecision()
+    {
+        var root = Generate("StackApi");
+        var context = new FeatureContext { ProjectName = "StackApi", RootPath = root };
+
+        foreach (var featureId in new[] { "postgres", "redis", "docker" })
+        {
+            await AddCommand.FeatureInstallers[featureId].InstallAsync(context);
+        }
+
+        var issues = await AnalyzeApi(root, "StackApi");
+
+        Assert.True(
+            issues.Select(issue => issue.RuleId).SequenceEqual(["SEC001"]),
+            "Unexpected findings:\n" + string.Join("\n", issues.Select(issue => $"  {issue.RuleId}: {issue.Description}")));
+
+        var compose = await File.ReadAllTextAsync(Path.Combine(root, "docker-compose.yml"));
+        Assert.Contains("ConnectionStrings__Postgres: \"Host=postgres;", compose, StringComparison.Ordinal);
+        Assert.Contains("ConnectionStrings__Redis: \"redis:6379\"", compose, StringComparison.Ordinal);
     }
 
     // `new` already includes ServiceDefaults; running `add telemetry` afterwards must change nothing.

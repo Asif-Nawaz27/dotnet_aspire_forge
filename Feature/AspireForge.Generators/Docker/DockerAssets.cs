@@ -1,3 +1,6 @@
+using AspireForge.Generators.Caching;
+using AspireForge.Generators.Database;
+
 namespace AspireForge.Generators.Docker;
 
 internal static class DockerAssets
@@ -46,6 +49,22 @@ internal static class DockerAssets
 
         if (includePostgres || includeSqlServer || includeRedis)
         {
+            // appsettings.json leaves the connection strings empty (SEC004), and inside the container the
+            // databases are reached by service name rather than localhost, so compose supplies them.
+            lines.Add("    environment:");
+            if (includePostgres)
+            {
+                lines.Add($"      ConnectionStrings__{DatabaseProviders.Postgres.ConnectionStringName}: \"{DatabaseProviders.Postgres.LocalConnectionString(projectName, "postgres")}\"");
+            }
+            if (includeSqlServer)
+            {
+                lines.Add($"      ConnectionStrings__{DatabaseProviders.SqlServer.ConnectionStringName}: \"{DatabaseProviders.SqlServer.LocalConnectionString(projectName, "sqlserver")}\"");
+            }
+            if (includeRedis)
+            {
+                lines.Add($"      ConnectionStrings__{RedisFeatureInstaller.ConnectionStringName}: \"redis:6379\"");
+            }
+
             lines.Add("    depends_on:");
             if (includePostgres)
             {

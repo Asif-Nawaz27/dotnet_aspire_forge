@@ -48,7 +48,7 @@ public sealed class EfCoreDatabaseFeatureInstaller(DatabaseProvider provider) : 
         return steps;
     }
 
-    private static async Task WriteDbContext(
+    private async Task WriteDbContext(
         FeatureContext context, string infrastructureProjectPath, CancellationToken cancellationToken)
     {
         var persistenceDirectory = Path.Combine(infrastructureProjectPath, "Persistence");
@@ -65,22 +65,49 @@ public sealed class EfCoreDatabaseFeatureInstaller(DatabaseProvider provider) : 
             """;
 
         await File.WriteAllTextAsync(Path.Combine(persistenceDirectory, "AppDbContext.cs"), content, cancellationToken);
+
+        // The registration lives in Infrastructure, next to the DbContext, so the Api never touches EF Core
+        // itself (ARCH001): Program.cs only passes the connection string in. EnableRetryOnFailure retries
+        // transient errors - a failover, a dropped connection - instead of failing the request (REL006).
+        var registration = $$"""
+            using Microsoft.EntityFrameworkCore;
+            using Microsoft.Extensions.DependencyInjection;
+
+            namespace {{context.ProjectName}}.Infrastructure.Persistence;
+
+            public static class PersistenceServiceCollectionExtensions
+            {
+                public static IServiceCollection AddPersistence(this IServiceCollection services, string? connectionString) =>
+                    services.AddDbContext<AppDbContext>(options =>
+                        // Retries transient failures, such as a failover or a dropped connection.
+                        options.{{provider.UseMethodName}}(connectionString, database => database.EnableRetryOnFailure()));
+            }
+            """;
+
+        await File.WriteAllTextAsync(
+            Path.Combine(persistenceDirectory, "PersistenceServiceCollectionExtensions.cs"), registration, cancellationToken);
     }
 
+    // appsettings.json ships in every publish output and container image, so it only gets an empty entry
+    // (SEC004): every deployed environment supplies ConnectionStrings__{Name}. The local container's
+    // connection string goes into appsettings.Development.json, so `dotnet run` works out of the box.
+    // The empty entry also tells `add docker` which databases the project uses.
     private void WireConnectionConfiguration(FeatureContext context, string apiProjectPath)
     {
         AppSettingsEditor.AddConnectionString(
-            Path.Combine(apiProjectPath, "appsettings.json"),
+            Path.Combine(apiProjectPath, "appsettings.json"), provider.ConnectionStringName, string.Empty);
+
+        AppSettingsEditor.AddConnectionString(
+            Path.Combine(apiProjectPath, "appsettings.Development.json"),
             provider.ConnectionStringName,
-            provider.ConnectionString(context.ProjectName));
+            provider.LocalConnectionString(context.ProjectName, "localhost"));
 
         ProgramFileEditor.AddUsingsAndServiceRegistration(
             Path.Combine(apiProjectPath, "Program.cs"),
-            usings: [$"{context.ProjectName}.Infrastructure.Persistence", "Microsoft.EntityFrameworkCore"],
+            usings: [$"{context.ProjectName}.Infrastructure.Persistence"],
             serviceRegistrationLines:
             [
-                "builder.Services.AddDbContext<AppDbContext>(options =>",
-                $"    options.{provider.UseMethodName}(builder.Configuration.GetConnectionString(\"{provider.ConnectionStringName}\")));",
+                $"builder.Services.AddPersistence(builder.Configuration.GetConnectionString(\"{provider.ConnectionStringName}\"));",
             ]);
     }
 

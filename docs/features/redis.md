@@ -31,4 +31,5 @@ app.MapGet("/cached", async (IDistributedCache cache) =>
 
 If you've also run `aspireforge add docker` (or generated with it, which is the default), re-run
 `aspireforge add docker` after `add redis` to refresh `docker-compose.yml` with a matching `redis`
-service. See [`add`](../commands/add.md).
+service. The api container gets `ConnectionStrings__Redis` (`redis:6379`) from the compose file,
+since `localhost` inside the container is the container itself. See [`add`](../commands/add.md).
