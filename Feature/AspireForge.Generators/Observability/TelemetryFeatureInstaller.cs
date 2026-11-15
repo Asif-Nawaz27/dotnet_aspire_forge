@@ -58,7 +58,9 @@ public sealed class TelemetryFeatureInstaller : IFeatureInstaller
     {
         var projectName = $"{context.ProjectName}.ServiceDefaults";
 
-        DotnetCli.Run(["new", "classlib", "-n", projectName, "-o", serviceDefaultsPath], context.RootPath);
+        DotnetCli.Run(
+            ["new", "classlib", "-n", projectName, "-o", serviceDefaultsPath, "--framework", GeneratedDotNet.TargetFramework],
+            context.RootPath);
 
         var placeholder = Path.Combine(serviceDefaultsPath, "Class1.cs");
         if (File.Exists(placeholder))

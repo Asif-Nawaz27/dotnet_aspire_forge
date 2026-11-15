@@ -11,6 +11,13 @@ public static class DotnetCli
     // it exits; they only stay open when something it started is still holding them (see RunProcess).
     private static readonly TimeSpan DefaultOutputGracePeriod = TimeSpan.FromSeconds(10);
 
+    internal static readonly string[] InheritedMSBuildVariables =
+    [
+        "MSBuildExtensionsPath",
+        "MSBuildSDKsPath",
+        "MSBUILD_EXE_PATH",
+    ];
+
     public static void Run(IReadOnlyList<string> arguments, string workingDirectory, TimeSpan? timeout = null) =>
         RunForOutput(arguments, workingDirectory, timeout);
 
@@ -49,48 +56,43 @@ public static class DotnetCli
 
         startInfo.Environment["MSBUILDDISABLENODEREUSE"] = "1";
 
-        var commandLine = $"{fileName} {string.Join(' ', arguments)}";
-        var stdout = new StringBuilder();
-        var stderr = new StringBuilder();
-        var stdoutClosed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var stderrClosed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        using var process = new Process { StartInfo = startInfo };
-
-        // Both streams are read concurrently, as they arrive: a child that fills one pipe's buffer while
-        // nothing reads it would block forever. A null line means that stream has closed.
-        process.OutputDataReceived += (_, e) => Append(stdout, stdoutClosed, e.Data);
-        process.ErrorDataReceived += (_, e) => Append(stderr, stderrClosed, e.Data);
-
-        if (!process.Start())
+        // `dotnet` sets these for the MSBuild it runs, pointing at its own SDK, and every process it starts
+        // inherits them: under `dotnet test` or `dotnet run -- new`, that includes this one. Passed on, they
+        // make a child command build with the parent's SDK instead of the one it would choose for its own
+        // directory, so a project the newest SDK created failed to build with an older one. Removing them
+        // lets each command pick its SDK the way it does when a developer runs it.
+        foreach (var variable in InheritedMSBuildVariables)
         {
-            throw new InvalidOperationException($"Failed to start '{commandLine}'.");
+            startInfo.Environment.Remove(variable);
         }
 
-        process.BeginOutputReadLine();
-        process.BeginErrorReadLine();
+        var commandLine = $"{fileName} {string.Join(' ', arguments)}";
+
+        using var process = Process.Start(startInfo)
+            ?? throw new InvalidOperationException($"Failed to start '{commandLine}'.");
+
+        // Both streams are read concurrently, as they arrive: a child that fills one pipe's buffer while
+        // nothing reads it would block forever. Each gets its own thread rather than a thread-pool
+        // callback, so a busy thread pool can't delay the reads past the grace period below.
+        var stdout = new PipeReader(process.StandardOutput);
+        var stderr = new PipeReader(process.StandardError);
 
         var timeoutMilliseconds = (int)(timeout ?? DefaultTimeout).TotalMilliseconds;
 
-        // The timed overload returns when the process exits, without waiting for the pipes to close.
         if (!process.WaitForExit(timeoutMilliseconds))
         {
             TryKillProcessTree(process);
             throw new TimeoutException($"'{commandLine}' did not exit within {timeoutMilliseconds}ms and was terminated.");
         }
 
-        Task.WaitAll([stdoutClosed.Task, stderrClosed.Task], outputGracePeriod ?? DefaultOutputGracePeriod);
+        // The process has exited; its output is complete once the pipes close, or once the grace period
+        // is over, if something it started is still holding them.
+        var graceEnds = DateTime.UtcNow + (outputGracePeriod ?? DefaultOutputGracePeriod);
+        stdout.WaitForEnd(graceEnds);
+        stderr.WaitForEnd(graceEnds);
 
-        string output, errors;
-        lock (stdout)
-        {
-            output = stdout.ToString();
-        }
-
-        lock (stderr)
-        {
-            errors = stderr.ToString();
-        }
+        var output = stdout.Text;
+        var errors = stderr.Text;
 
         if (process.ExitCode != 0)
         {
@@ -101,17 +103,56 @@ public static class DotnetCli
         return output;
     }
 
-    private static void Append(StringBuilder buffer, TaskCompletionSource closed, string? line)
+    // Reads a redirected stream to its end on a dedicated background thread. If something keeps the pipe
+    // open forever, the thread stays blocked in Read; it's a background thread, so it never keeps the
+    // process alive.
+    private sealed class PipeReader
     {
-        if (line is null)
+        private readonly StringBuilder _text = new();
+        private readonly Thread _thread;
+
+        public PipeReader(StreamReader reader)
         {
-            closed.TrySetResult();
-            return;
+            _thread = new Thread(() => ReadToEnd(reader)) { IsBackground = true, Name = "DotnetCli output" };
+            _thread.Start();
         }
 
-        lock (buffer)
+        public string Text
         {
-            buffer.AppendLine(line);
+            get
+            {
+                lock (_text)
+                {
+                    return _text.ToString();
+                }
+            }
+        }
+
+        public void WaitForEnd(DateTime deadline)
+        {
+            var remaining = deadline - DateTime.UtcNow;
+            _thread.Join(remaining > TimeSpan.Zero ? remaining : TimeSpan.Zero);
+        }
+
+        private void ReadToEnd(StreamReader reader)
+        {
+            var buffer = new char[4096];
+
+            try
+            {
+                int read;
+                while ((read = reader.Read(buffer, 0, buffer.Length)) > 0)
+                {
+                    lock (_text)
+                    {
+                        _text.Append(buffer, 0, read);
+                    }
+                }
+            }
+            catch (Exception exception) when (exception is IOException or ObjectDisposedException)
+            {
+                // The process was disposed while the pipe was still held open; what was read is kept.
+            }
         }
     }
 

@@ -113,9 +113,13 @@ public sealed class CleanArchitectureGenerator : IProjectGenerator
         File.WriteAllText(Path.Combine(api.ProjectPath, "Program.cs"), ApiProgramTemplate.ProgramCs(options.ProjectName));
     }
 
-    private static List<string> ConfigureTemplateArguments(ProjectTemplate template, GenerationOptions options)
+    internal static List<string> ConfigureTemplateArguments(ProjectTemplate template, GenerationOptions options)
     {
-        List<string> arguments = ["new", template.TemplateName, "-n", template.ProjectName, "-o", template.ProjectPath];
+        List<string> arguments =
+        [
+            "new", template.TemplateName, "-n", template.ProjectName, "-o", template.ProjectPath,
+            "--framework", GeneratedDotNet.TargetFramework,
+        ];
 
         if (options.Parameters.TryGetValue($"{template.Layer}:args", out var extraArguments))
         {

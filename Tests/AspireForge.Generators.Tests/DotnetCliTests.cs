@@ -13,14 +13,15 @@ public class DotnetCliTests
     public async Task ReturnsOnceTheProcessExits_EvenWhenAChildItStartedStillHoldsTheOutput()
     {
         var (fileName, arguments) = OperatingSystem.IsWindows()
-            ? ("cmd", new[] { "/c", "start /b ping -n 30 127.0.0.1 & echo done" })
-            : ("sh", new[] { "-c", "sleep 30 & echo done" });
+            ? ("cmd", new[] { "/c", "start /b ping -n 90 127.0.0.1 & echo done" })
+            : ("sh", new[] { "-c", "sleep 90 & echo done" });
 
         var run = Task.Run(() => DotnetCli.RunProcess(
-            fileName, arguments, WorkingDirectory, outputGracePeriod: TimeSpan.FromSeconds(1)));
+            fileName, arguments, WorkingDirectory, outputGracePeriod: TimeSpan.FromSeconds(2)));
 
-        // Well under the 30 seconds the child holds the pipes for.
-        var output = await run.WaitAsync(TimeSpan.FromSeconds(15));
+        // Generous for a busy machine (these tests run next to real builds), and still far under the 90
+        // seconds the child holds the pipes for, which the old code waited out.
+        var output = await run.WaitAsync(TimeSpan.FromSeconds(45));
 
         Assert.Contains("done", output, StringComparison.Ordinal);
     }
@@ -62,6 +63,39 @@ public class DotnetCliTests
 
         Assert.Throws<TimeoutException>(() =>
             DotnetCli.RunProcess(fileName, arguments, WorkingDirectory, timeout: TimeSpan.FromSeconds(1)));
+    }
+
+    // Regression test: `dotnet test` (or `dotnet run -- new`) sets these for its own SDK, and a child
+    // `dotnet build` that inherited them built with that SDK instead of the one it would pick itself.
+    // Each is set here only if this process doesn't already have it, and restored afterwards.
+    [Fact]
+    public void DoesNotPassOnTheParentsMSBuildPaths()
+    {
+        var originals = DotnetCli.InheritedMSBuildVariables.ToDictionary(name => name, Environment.GetEnvironmentVariable);
+
+        try
+        {
+            foreach (var name in DotnetCli.InheritedMSBuildVariables)
+            {
+                Environment.SetEnvironmentVariable(name, originals[name] ?? "inherited-from-parent");
+            }
+
+            foreach (var name in DotnetCli.InheritedMSBuildVariables)
+            {
+                var (fileName, arguments) = OperatingSystem.IsWindows()
+                    ? ("cmd", new[] { "/c", $"if defined {name} (echo present) else (echo absent)" })
+                    : ("sh", new[] { "-c", $"if [ -n \"${{{name}+x}}\" ]; then echo present; else echo absent; fi" });
+
+                Assert.Equal("absent", DotnetCli.RunProcess(fileName, arguments, WorkingDirectory).Trim());
+            }
+        }
+        finally
+        {
+            foreach (var (name, value) in originals)
+            {
+                Environment.SetEnvironmentVariable(name, value);
+            }
+        }
     }
 
     // The MSBuild-driven commands this runs mustn't leave nodes behind to hold the pipes in the first place.
