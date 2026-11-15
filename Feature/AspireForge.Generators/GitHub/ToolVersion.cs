@@ -10,7 +10,7 @@ public static class ToolVersion
 {
     public static string Current { get; } = Read(typeof(ToolVersion).Assembly);
 
-    // "0.1.0+40b6ccb" - the part after the plus is the commit, which isn't part of the package version.
+    // "0.3.0+40b6ccb" - the part after the plus is the commit, which isn't part of the package version.
     public static string Read(Assembly assembly) =>
         assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion.Split('+')[0]
             ?? throw new InvalidOperationException($"{assembly.GetName().Name} has no version.");

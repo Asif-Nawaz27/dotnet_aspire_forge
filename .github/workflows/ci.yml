@@ -3,15 +3,24 @@ name: CI
 on:
   push:
     branches: [main]
+  # Tests run before a merge, not only after it lands on main.
+  pull_request:
+    branches: [main]
   release:
     types: [published]
 
 permissions:
   contents: read
 
+# A new push to a pull request cancels its earlier, now outdated run. Runs on main and releases
+# always finish.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   build-and-test:
-    if: github.event_name == 'push'
+    if: github.event_name != 'release'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -43,6 +52,16 @@ jobs:
         run: |
           dotnet test App/Tests/App.UnitTests --no-restore --no-build --configuration Release
           dotnet test App/Tests/App.Api.IntegrationTests --no-restore --no-build --configuration Release
+
+      # AspireForge checks its own sample app, with the tool built from this commit rather than a
+      # published release, so a rule change that breaks on a real project fails here first. The
+      # summary runs first and can't fail, so the report is on the run's summary page even when the
+      # gate below fails.
+      - name: Doctor summary (sample app)
+        run: dotnet Feature/AspireForge.Cli/bin/Release/net10.0/aspireforge.dll doctor App/Feature/App.Api --format markdown >> "$GITHUB_STEP_SUMMARY" || true
+
+      - name: Doctor (sample app)
+        run: dotnet Feature/AspireForge.Cli/bin/Release/net10.0/aspireforge.dll doctor App/Feature/App.Api
 
       - name: Pack
         run: dotnet pack Feature/AspireForge.Cli --no-restore --no-build --configuration Release --output ./artifacts

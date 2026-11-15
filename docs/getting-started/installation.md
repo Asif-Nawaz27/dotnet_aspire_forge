@@ -22,7 +22,7 @@ aspireforge version
 ```
 
 ```
-aspireforge 0.1.0.0
+aspireforge 0.3.0.0
 ```
 
 ## Upgrading
