@@ -21,7 +21,8 @@ aspireforge doctor
 AspireForge is a .NET global tool with three jobs: **generate** a clean-architecture ASP.NET Core
 solution, **add** production concerns to it (a database, caching, telemetry, auth, Docker) on
 demand, and **audit** any project against a rule set covering security, reliability,
-observability, testing, architecture, and performance - in plain text, JSON, or SARIF for CI.
+observability, testing, architecture, performance, and deployment - in plain text, JSON, Markdown,
+or SARIF for CI.
 
 ## Why it exists
 
@@ -30,6 +31,31 @@ because nobody set them up on day one, not because the team doesn't care. `dotne
 you a project; it doesn't tell you what's missing before it becomes an incident. AspireForge is the
 part of the workflow that checks - at generation time, whenever you add something, and in CI on
 every pull request.
+
+## How it compares
+
+AspireForge doesn't replace your analyzers. They check code; AspireForge checks how a deployable
+service is put together: whether health checks, telemetry, exception handling, HTTPS, rate limiting
+and authentication are actually wired up, what's in `appsettings*.json` and the Dockerfile, and
+which way project references point. Many of its findings are about something that's **missing**,
+which a per-file code analyzer has nothing to attach to.
+
+| Tool | What it checks | Use it alongside AspireForge for |
+|---|---|---|
+| Roslyn analyzers (the .NET SDK's `CA` rules, ASP.NET Core's analyzers, Meziantou, Roslynator, SonarAnalyzer) | C# code, with the compiler's semantic model, in the IDE and the build | Code correctness, style and API misuse, with exact precision |
+| SonarQube / SonarCloud | Code quality, security hotspots, duplication and coverage across many languages, with a server-side quality gate | Organisation-wide quality tracking and dashboards |
+| NetArchTest / ArchUnitNET | Architecture rules you write as unit tests, at the level of types and namespaces | Custom, fine-grained dependency rules |
+| `dotnet list package --vulnerable` / NuGet Audit | Packages with known vulnerabilities | AspireForge's DEP002 (`doctor --vulnerable`) runs the same check and reports it with everything else |
+| .NET Aspire ServiceDefaults | Not a checker: a project that sets up OpenTelemetry, health checks and resilience | AspireForge generates a ServiceDefaults project, and its rules check that one is wired in |
+
+Where AspireForge is weaker, honestly:
+
+- **Text heuristics, not a semantic model.** Rules read source text with comments stripped, so they
+  run without a build and on a project that doesn't compile, but they're less precise than a Roslyn
+  analyzer. False positives are treated as bugs; report them and each one becomes a regression test.
+- **No IDE integration.** Findings show up in the terminal and in CI (including GitHub code
+  scanning through SARIF), not as squiggles in the editor.
+- **ASP.NET Core APIs only,** and for the architecture rules, clean or layered architecture only.
 
 ## Installation
 
@@ -116,7 +142,7 @@ scanning. `--fail-on warning` makes CI fail on warnings, not just errors. Detail
 | `aspireforge add telemetry` | An OpenTelemetry `ServiceDefaults` project (metrics, traces, logs, health checks), following Microsoft's own Aspire convention. |
 | `aspireforge add authentication` | JWT Bearer auth/authorization via ASP.NET Core's own middleware. |
 | `aspireforge add docker` | (Re)generates Docker assets, aware of whatever databases/caches are already configured. |
-| `aspireforge doctor` | Analyzes a project; text, JSON, or SARIF output. |
+| `aspireforge doctor` | Analyzes a project; text, JSON, Markdown, or SARIF output. |
 | `aspireforge fix <ruleId>` | Automatically resolves a single rule finding (e.g. `aspireforge fix REL001`). |
 | `aspireforge update` | Refreshes AspireForge-generated scaffolding (`.gitignore`, Docker, CI) in an existing project. |
 | `aspireforge rules list` | Prints the full rule catalog. |
@@ -184,7 +210,7 @@ Details and fixes for each: [security](docs/rules/security.md) ·
 ## Roadmap
 
 v0.1 shipped the CLI, `new`, `doctor`, Postgres, Docker, health checks, OpenTelemetry, basic
-(JWT Bearer) authentication, 10 analysis rules, JSON output, tests, CI, and the NuGet package. v0.2
+(JWT Bearer) authentication, 10 analysis rules, JSON output, tests, CI, and NuGet packaging. v0.2
 added Redis, SQL Server, SARIF, and per-project configuration. v0.3 added `fix`, `update`, a first
 Performance category (`PERF001`-`PERF003`), plus made rule detection smarter where it mattered
 most: `ARCH001`, `SEC001`, `REL001`, `OBS001`, and `OBS002` all now verify a feature is actually
@@ -195,10 +221,10 @@ every text-based rule ignores matches inside comments. That rounds out the
 - **`rules install <pack>`** - third-party rule packages built on the same `IAnalysisRule`
   contract as the built-in rules.
 - **A distributable GitHub Action** wrapping `aspireforge doctor`, so other repos can run it in CI
-  without hand-writing the workflow steps AspireForge's own [`ci.yml`](.github/workflows/ci.yml) uses.
+  without the hand-written workflow steps that `aspireforge new` generates today.
 - **More security, performance, and architecture rules**, and pushing more of them past plain text
   search toward real Roslyn semantic analysis, closer to what a compiler actually sees.
-- **More fixes** - most of the 13 rules don't have an automatic fix yet; see
+- **More fixes** - most rules don't have an automatic fix yet; see
   [`fix`](docs/commands/fix.md#fixable-rules-today) for which do and why the rest don't.
 - **MySQL** as another `add` database provider, alongside Postgres and SQL Server.
 - **`vertical-slice` architecture** as a second `--architecture` option alongside `clean`.
